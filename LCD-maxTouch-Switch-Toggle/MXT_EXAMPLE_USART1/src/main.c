@@ -84,6 +84,7 @@
  * Support and FAQ: visit <a href="https://www.microchip.com/support/">Microchip Support</a>
  */
 
+
 #include <asf.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -91,10 +92,16 @@
 #include "maquina1.h"
 #include "conf_board.h"
 #include "conf_example.h"
+
+ typedef struct {
+	 const uint8_t *data;
+	 uint16_t width;
+	 uint16_t height;
+	 uint8_t dataSize;
+ } tImage;
+ 
 #include "tfont.h"
-#include "sourcecodepro_28.h"
 #include "calibri_36.h"
-#include "arial_72.h"
 #include "conf_uart_serial.h"
 
 #define MAX_ENTRIES        3
@@ -129,14 +136,6 @@ volatile uint8_t flag_prev = 0;
 volatile uint32_t hour;
 volatile uint32_t minute;
 volatile uint32_t second;
-
-
- typedef struct {
-	 const uint8_t *data;
-	 uint16_t width;
-	 uint16_t height;
-	 uint8_t dataSize;
- } tImage;
  
 #include "icones/laundry.h"
 #include "icones/arrow_left.h"
@@ -492,7 +491,7 @@ int main(void)
 			}
 
 		}
-		}		
+				
 		
 	}
 
