@@ -103,6 +103,15 @@ const uint32_t BUTTON_H = 150;
 const uint32_t BUTTON_BORDER = 2;
 const uint32_t BUTTON_X = ILI9488_LCD_WIDTH/2;
 const uint32_t BUTTON_Y = ILI9488_LCD_HEIGHT/2;
+
+ typedef struct {
+	 const uint8_t *data;
+	 uint16_t width;
+	 uint16_t height;
+	 uint8_t dataSize;
+ } tImage;
+ 
+ #include "icones/laundry.h"
 	
 static void configure_lcd(void){
 	/* Initialize display parameter */
@@ -327,6 +336,8 @@ int main(void)
 		if (mxt_is_message_pending(&device)) {
 			mxt_handler(&device);
 		}
+		
+		ili9488_draw_pixmap(128, 10, laundry.width, laundry.height, laundry.data);
 		
 	}
 
