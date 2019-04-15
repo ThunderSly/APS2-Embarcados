@@ -88,8 +88,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "maquina1.h"
 #include "conf_board.h"
 #include "conf_example.h"
+#include "tfont.h"
+#include "sourcecodepro_28.h"
+#include "calibri_36.h"
+#include "arial_72.h"
 #include "conf_uart_serial.h"
 
 #define MAX_ENTRIES        3
@@ -103,6 +108,28 @@ const uint32_t BUTTON_H = 150;
 const uint32_t BUTTON_BORDER = 2;
 const uint32_t BUTTON_X = ILI9488_LCD_WIDTH/2;
 const uint32_t BUTTON_Y = ILI9488_LCD_HEIGHT/2;
+
+#define YEAR        2019
+#define MONTH		4
+#define DAY         8
+#define WEEK        15
+#define HOUR        16
+#define MINUTE      18
+#define SECOND      0
+
+volatile uint8_t flag_rtc_ala = 0;
+volatile uint8_t flag_rtc_seg = 0;
+volatile uint8_t flag_lock = 1;
+volatile uint8_t flag_door = 0;
+volatile uint8_t flag_play = 0;
+volatile uint8_t flag_next = 0;
+volatile uint8_t flag_prev = 0;
+
+
+volatile uint32_t hour;
+volatile uint32_t minute;
+volatile uint32_t second;
+
 
  typedef struct {
 	 const uint8_t *data;
@@ -132,6 +159,87 @@ static void configure_lcd(void){
 	/* Initialize LCD */
 	ili9488_init(&g_ili9488_display_opt);
 	ili9488_draw_filled_rectangle(0, 0, ILI9488_LCD_WIDTH-1, ILI9488_LCD_HEIGHT-1);
+}
+
+t_ciclo *initMenuOrder(){
+	c_rapido.previous = &c_enxague;
+	c_rapido.next = &c_diario;
+
+	c_diario.previous = &c_rapido;
+	c_diario.next = &c_pesado;
+
+	c_pesado.previous = &c_diario;
+	c_pesado.next = &c_enxague;
+
+	c_enxague.previous = &c_pesado;
+	c_enxague.next = &c_centrifuga;
+
+	c_centrifuga.previous = &c_enxague;
+	c_centrifuga.next = &c_rapido;
+
+	return(&c_diario);
+}
+
+void RTC_Handler(void)
+{
+	uint32_t ul_status = rtc_get_status(RTC);
+
+	/*
+	*  Verifica por qual motivo entrou
+	*  na interrupcao, se foi por segundo
+	*  ou Alarm
+	*/
+	if ((ul_status & RTC_SR_SEC) == RTC_SR_SEC) {
+		rtc_clear_status(RTC, RTC_SCCR_SECCLR);
+		flag_rtc_seg = 1;
+	}
+	
+	/* Time or date alarm */
+	if ((ul_status & RTC_SR_ALARM) == RTC_SR_ALARM) {
+		rtc_clear_status(RTC, RTC_SCCR_ALRCLR);
+		flag_rtc_ala = 1;		
+	}
+	
+	
+	rtc_clear_status(RTC, RTC_SCCR_ACKCLR);
+	rtc_clear_status(RTC, RTC_SCCR_TIMCLR);
+	rtc_clear_status(RTC, RTC_SCCR_CALCLR);
+	rtc_clear_status(RTC, RTC_SCCR_TDERRCLR);
+	
+}
+
+void Lock_Handler(void){
+	flag_lock = !flag_lock;
+	//DRAW LOCK DIFERENTE COM IF
+}
+
+void Door_Handler(void){
+	if (flag_play)
+	flag_door = !flag_door;
+	//DRAW DOOR DIFERENTE COM IF
+}
+
+void RTC_init(){
+	/* Configura o PMC */
+	pmc_enable_periph_clk(ID_RTC);
+
+	/* Default RTC configuration, 24-hour mode */
+	rtc_set_hour_mode(RTC, 0);
+
+	/* Configura data e hora manualmente */
+	rtc_set_date(RTC, YEAR, MONTH, DAY, WEEK);
+	rtc_set_time(RTC, HOUR, MINUTE, SECOND);
+
+	/* Configure RTC interrupts */
+	NVIC_DisableIRQ(RTC_IRQn);
+	NVIC_ClearPendingIRQ(RTC_IRQn);
+	NVIC_SetPriority(RTC_IRQn, 0);
+	NVIC_EnableIRQ(RTC_IRQn);
+
+	/* Ativa interrupcao via alarme */
+// 	rtc_enable_interrupt(RTC,  RTC_IER_SECEN);
+// 	rtc_enable_interrupt(RTC, RTC_IER_ALREN);
+
 }
 
 /**
@@ -236,6 +344,20 @@ void draw_screen(void) {
 	ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
 }
 
+void font_draw_text(tFont *font, const char *text, int x, int y, int spacing) {
+	char *p = text;
+	while(*p != NULL) {
+		char letter = *p;
+		int letter_offset = letter - font->start_char;
+		if(letter <= font->end_char) {
+			tChar *current_char = font->chars + letter_offset;
+			ili9488_draw_pixmap(x, y, current_char->image->width, current_char->image->height, current_char->image->data);
+			x += current_char->image->width + spacing;
+		}
+		p++;
+	}
+}
+
 uint32_t convert_axis_system_x(uint32_t touch_y) {
 	// entrada: 4096 - 0 (sistema de coordenadas atual)
 	// saida: 0 - 320
@@ -249,7 +371,17 @@ uint32_t convert_axis_system_y(uint32_t touch_x) {
 }
 
 void update_screen(uint32_t tx, uint32_t ty) {
-	
+	if(tx >= 96 && tx <= 96+128){
+		if(ty >= 176 && ty <= 176+128){
+			if(flag_play){
+				ili9488_draw_pixmap(96, 176, pause_button.width, pause_button.height, pause_button.data);
+			}
+			else {
+				ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
+			}
+		}
+			
+	}
 }
 
 void mxt_handler(struct mxt_device *device)
@@ -298,6 +430,7 @@ void mxt_handler(struct mxt_device *device)
 
 int main(void)
 {
+	t_ciclo *p_ciclo = initMenuOrder();
 	struct mxt_device device; /* Device data container */
 
 	/* Initialize the USART configuration struct */
@@ -312,13 +445,12 @@ int main(void)
 	board_init();  /* Initialize board */
 	configure_lcd();
 	draw_screen();
+	RTC_init();
 	/* Initialize the mXT touch device */
 	mxt_init(&device);
 	
 	/* Initialize stdio on USART */
 	stdio_serial_init(USART_SERIAL_EXAMPLE, &usart_serial_options);
-
-	printf("\n\rmaXTouch data USART transmitter\n\r");
 		
 
 	while (true) {
@@ -326,6 +458,40 @@ int main(void)
 		 * message is found in the queue */
 		if (mxt_is_message_pending(&device)) {
 			mxt_handler(&device);
+		}
+		if (flag_lock){
+			if (flag_next){
+				p_ciclo = p_ciclo->next;
+				flag_next = 0;
+			}
+			if (flag_prev){
+				p_ciclo = p_ciclo->previous;
+				flag_prev = 0;
+			}
+			if (flag_door){
+				if (flag_play){
+					rtc_enable_interrupt(RTC,  RTC_IER_SECEN);
+					rtc_enable_interrupt(RTC, RTC_IER_ALREN);
+					rtc_set_time_alarm(RTC, 1, hour, 1, minute + ((p_ciclo->enxagueTempo) + (p_ciclo->centrifugacaoTempo)), 1, second);
+					flag_play = 0;
+					//DRAW PAUSE
+				}
+			}
+			if (flag_rtc_seg){
+				rtc_get_time(RTC,&hour,&minute,&second);
+				char b3[32];
+				sprintf(b3,"%02d : %02d",(p_ciclo->centrifugacaoTempo + p_ciclo->enxagueTempo) - (minute - MINUTE + 1), 60 - (second - SECOND));
+				font_draw_text(&calibri_36, b3, 50, 200, 1); //ACERTAR POSICAO
+				flag_rtc_seg = 0;
+			}
+			if (flag_rtc_ala){
+				rtc_disable_interrupt(RTC, RTC_IER_SECEN);
+				rtc_disable_interrupt(RTC, RTC_IER_ALREN);
+				flag_rtc_ala = 0;
+				//DRAW PLAY E APAGA TEMPO
+			}
+
+		}
 		}		
 		
 	}
