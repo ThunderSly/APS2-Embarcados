@@ -111,7 +111,15 @@ const uint32_t BUTTON_Y = ILI9488_LCD_HEIGHT/2;
 	 uint8_t dataSize;
  } tImage;
  
- #include "icones/laundry.h"
+#include "icones/laundry.h"
+#include "icones/arrow_left.h"
+#include "icones/arrow_right.h"
+#include "icones/locked.h"
+#include "icones/unlocked.h"
+#include "icones/closed_door.h"
+#include "icones/opened_door.h"
+#include "icones/play_button.h"
+#include "icones/pause_button.h"
 	
 static void configure_lcd(void){
 	/* Initialize display parameter */
@@ -119,9 +127,11 @@ static void configure_lcd(void){
 	g_ili9488_display_opt.ul_height = ILI9488_LCD_HEIGHT;
 	g_ili9488_display_opt.foreground_color = COLOR_CONVERT(COLOR_WHITE);
 	g_ili9488_display_opt.background_color = COLOR_CONVERT(COLOR_WHITE);
+	
 
 	/* Initialize LCD */
 	ili9488_init(&g_ili9488_display_opt);
+	ili9488_draw_filled_rectangle(0, 0, ILI9488_LCD_WIDTH-1, ILI9488_LCD_HEIGHT-1);
 }
 
 /**
@@ -218,24 +228,12 @@ static void mxt_init(struct mxt_device *device)
 }
 
 void draw_screen(void) {
-	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
-	ili9488_draw_filled_rectangle(0, 0, ILI9488_LCD_WIDTH-1, ILI9488_LCD_HEIGHT-1);
-}
-
-void draw_button(uint32_t clicked) {
-	static uint32_t last_state = 255; // undefined
-	if(clicked == last_state) return;
-	
-	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));
-	ili9488_draw_filled_rectangle(BUTTON_X-BUTTON_W/2, BUTTON_Y-BUTTON_H/2, BUTTON_X+BUTTON_W/2, BUTTON_Y+BUTTON_H/2);
-	if(clicked) {
-		ili9488_set_foreground_color(COLOR_CONVERT(COLOR_TOMATO));
-		ili9488_draw_filled_rectangle(BUTTON_X-BUTTON_W/2+BUTTON_BORDER, BUTTON_Y+BUTTON_BORDER, BUTTON_X+BUTTON_W/2-BUTTON_BORDER, BUTTON_Y+BUTTON_H/2-BUTTON_BORDER);
-	} else {
-		ili9488_set_foreground_color(COLOR_CONVERT(COLOR_GREEN));
-		ili9488_draw_filled_rectangle(BUTTON_X-BUTTON_W/2+BUTTON_BORDER, BUTTON_Y-BUTTON_H/2+BUTTON_BORDER, BUTTON_X+BUTTON_W/2-BUTTON_BORDER, BUTTON_Y-BUTTON_BORDER);
-	}
-	last_state = clicked;
+	ili9488_draw_pixmap(128, 10, laundry.width, laundry.height, laundry.data);
+	ili9488_draw_pixmap(32, 10, arrow_left.width, arrow_left.height, arrow_left.data);
+	ili9488_draw_pixmap(224, 10, arrow_right.width, arrow_right.height, arrow_right.data);
+	ili9488_draw_pixmap(32, 406, unlocked.width, unlocked.height, unlocked.data);
+	ili9488_draw_pixmap(224, 406, closed_door.width, closed_door.height, closed_door.data);
+	ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
 }
 
 uint32_t convert_axis_system_x(uint32_t touch_y) {
@@ -251,13 +249,7 @@ uint32_t convert_axis_system_y(uint32_t touch_x) {
 }
 
 void update_screen(uint32_t tx, uint32_t ty) {
-	if(tx >= BUTTON_X-BUTTON_W/2 && tx <= BUTTON_X + BUTTON_W/2) {
-		if(ty >= BUTTON_Y-BUTTON_H/2 && ty <= BUTTON_Y) {
-			draw_button(1);
-		} else if(ty > BUTTON_Y && ty < BUTTON_Y + BUTTON_H/2) {
-			draw_button(0);
-		}
-	}
+	
 }
 
 void mxt_handler(struct mxt_device *device)
@@ -320,7 +312,6 @@ int main(void)
 	board_init();  /* Initialize board */
 	configure_lcd();
 	draw_screen();
-	draw_button(0);
 	/* Initialize the mXT touch device */
 	mxt_init(&device);
 	
@@ -335,9 +326,7 @@ int main(void)
 		 * message is found in the queue */
 		if (mxt_is_message_pending(&device)) {
 			mxt_handler(&device);
-		}
-		
-		ili9488_draw_pixmap(128, 10, laundry.width, laundry.height, laundry.data);
+		}		
 		
 	}
 

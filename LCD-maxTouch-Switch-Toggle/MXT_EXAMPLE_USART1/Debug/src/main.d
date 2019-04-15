@@ -182,7 +182,11 @@ src/main.d src/main.o: ../src/main.c ../src/asf.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\arm-none-eabi\include\xlocale.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\arm-none-eabi\include\sys\string.h \
  ../src/config/conf_board.h ../src/config/conf_example.h \
- ../src/icones/laundry.h
+ ../src/icones/laundry.h ../src/icones/arrow_left.h \
+ ../src/icones/arrow_right.h ../src/icones/locked.h \
+ ../src/icones/unlocked.h ../src/icones/closed_door.h \
+ ../src/icones/opened_door.h ../src/icones/play_button.h \
+ ../src/icones/pause_button.h
 
 ../src/asf.h:
 
@@ -571,3 +575,19 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\arm-no
 ../src/config/conf_example.h:
 
 ../src/icones/laundry.h:
+
+../src/icones/arrow_left.h:
+
+../src/icones/arrow_right.h:
+
+../src/icones/locked.h:
+
+../src/icones/unlocked.h:
+
+../src/icones/closed_door.h:
+
+../src/icones/opened_door.h:
+
+../src/icones/play_button.h:
+
+../src/icones/pause_button.h:

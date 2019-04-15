@@ -1338,7 +1338,31 @@
     <None Include="src\config\conf_ili9488.h">
       <SubType>compile</SubType>
     </None>
+    <Compile Include="src\icones\arrow_left.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\icones\arrow_right.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\icones\closed_door.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\icones\laundry.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\icones\locked.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\icones\opened_door.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\icones\pause_button.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\icones\play_button.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\icones\unlocked.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\main.c">
