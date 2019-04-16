@@ -131,6 +131,7 @@ volatile uint8_t flag_door = 0;
 volatile uint8_t flag_play = 0;
 volatile uint8_t flag_next = 0;
 volatile uint8_t flag_prev = 0;
+volatile uint8_t flag_playing = 0;
 
 
 volatile uint32_t hour;
@@ -179,8 +180,7 @@ t_ciclo *initMenuOrder(){
 	return(&c_diario);
 }
 
-void RTC_Handler(void)
-{
+void RTC_Handler(void){
 	uint32_t ul_status = rtc_get_status(RTC);
 
 	/*
@@ -213,9 +213,18 @@ void Lock_Handler(void){
 }
 
 void Door_Handler(void){
-	if (flag_play)
-	flag_door = !flag_door;
+	if (flag_playing){
+		return; //PRINTA ALGUMA COISA
+	}
+	else{
+		flag_door = !flag_door;
+	}
 	//DRAW DOOR DIFERENTE COM IF
+}
+
+void Play_Handler(void){
+	flag_play = 1;
+	flag_playing = 1;
 }
 
 void RTC_init(){
@@ -241,14 +250,6 @@ void RTC_init(){
 
 }
 
-/**
- * \brief Set maXTouch configuration
- *
- * This function writes a set of predefined, optimal maXTouch configuration data
- * to the maXTouch Xplained Pro.
- *
- * \param device Pointer to mxt_device struct
- */
 static void mxt_init(struct mxt_device *device)
 {
 	enum status_code status;
@@ -372,8 +373,9 @@ uint32_t convert_axis_system_y(uint32_t touch_x) {
 void update_screen(uint32_t tx, uint32_t ty) {
 	if(tx >= 96 && tx <= 96+128){
 		if(ty >= 176 && ty <= 176+128){
-			if(flag_play){
+			if(!flag_playing){
 				ili9488_draw_pixmap(96, 176, pause_button.width, pause_button.height, pause_button.data);
+				Play_Handler();
 			}
 			else {
 				ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
@@ -486,7 +488,9 @@ int main(void)
 			if (flag_rtc_ala){
 				rtc_disable_interrupt(RTC, RTC_IER_SECEN);
 				rtc_disable_interrupt(RTC, RTC_IER_ALREN);
+				flag_playing = 0;
 				flag_rtc_ala = 0;
+				ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
 				//DRAW PLAY E APAGA TEMPO
 			}
 
