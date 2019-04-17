@@ -89,7 +89,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "maquina1.h"
 #include "conf_board.h"
 #include "conf_example.h"
 
@@ -99,7 +98,7 @@
 	 uint16_t height;
 	 uint8_t dataSize;
  } tImage;
- 
+
 #include "tfont.h"
 #include "calibri_36.h"
 #include "conf_uart_serial.h"
@@ -144,7 +143,6 @@ volatile uint32_t hour;
 volatile uint32_t minute;
 volatile uint32_t second;
  
-#include "icones/laundry.h"
 #include "icones/arrow_left.h"
 #include "icones/arrow_right.h"
 #include "icones/locked.h"
@@ -153,6 +151,13 @@ volatile uint32_t second;
 #include "icones/opened_door.h"
 #include "icones/play_button.h"
 #include "icones/pause_button.h"
+#include "icones/pesado.h"
+#include "icones/rapido.h"
+#include "icones/diario.h"
+#include "icones/enxague.h"
+#include "icones/centrifuga.h"
+
+#include "maquina1.h"
 	
 static void configure_lcd(void){
 	/* Initialize display parameter */
@@ -215,7 +220,12 @@ void RTC_Handler(void){
 
 void Lock_Handler(void){
 	flag_lock = !flag_lock;
-	//DRAW LOCK DIFERENTE COM IF
+	if(flag_lock){			
+		ili9488_draw_pixmap(32, 406, locked.width, locked.height, locked.data);
+	}
+	else {
+		ili9488_draw_pixmap(32, 406, unlocked.width, unlocked.height, unlocked.data);
+	}
 }
 
 void Door_Handler(void){
@@ -225,7 +235,12 @@ void Door_Handler(void){
 	}
 	else{
 		flag_door = !flag_door;
-		//DRAW DOOR DIFERENTE COM IF
+		if(flag_door){
+			ili9488_draw_pixmap(224, 406, closed_door.width, closed_door.height, closed_door.data);
+		}
+		else {
+			ili9488_draw_pixmap(224, 406, opened_door.width, opened_door.height, opened_door.data);
+		}
 	}
 	
 }
@@ -364,15 +379,6 @@ static void mxt_init(struct mxt_device *device)
 			+ MXT_GEN_COMMANDPROCESSOR_CALIBRATE, 0x01);
 }
 
-void draw_screen(void) {
-	ili9488_draw_pixmap(128, 10, laundry.width, laundry.height, laundry.data);
-	ili9488_draw_pixmap(32, 10, arrow_left.width, arrow_left.height, arrow_left.data);
-	ili9488_draw_pixmap(224, 10, arrow_right.width, arrow_right.height, arrow_right.data);
-	ili9488_draw_pixmap(32, 406, unlocked.width, unlocked.height, unlocked.data);
-	ili9488_draw_pixmap(224, 406, closed_door.width, closed_door.height, closed_door.data);
-	ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
-}
-
 void font_draw_text(tFont *font, const char *text, int x, int y, int spacing) {
 	char *p = text;
 	while(*p != NULL) {
@@ -385,6 +391,18 @@ void font_draw_text(tFont *font, const char *text, int x, int y, int spacing) {
 		}
 		p++;
 	}
+}
+
+void draw_screen(void) {
+	ili9488_draw_pixmap(128, 10, diario.width, diario.height, diario.data);
+	ili9488_draw_pixmap(32, 10, arrow_left.width, arrow_left.height, arrow_left.data);
+	ili9488_draw_pixmap(224, 10, arrow_right.width, arrow_right.height, arrow_right.data);
+	ili9488_draw_pixmap(32, 406, unlocked.width, unlocked.height, unlocked.data);
+	ili9488_draw_pixmap(224, 406, closed_door.width, closed_door.height, closed_door.data);
+	ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
+	char modo[32];
+	sprintf(modo,"Modo:");
+	font_draw_text(&calibri_36, modo, 10, 84, 1);
 }
 
 uint32_t convert_axis_system_x(uint32_t touch_y) {
@@ -401,18 +419,36 @@ uint32_t convert_axis_system_y(uint32_t touch_x) {
 
 void update_screen(uint32_t tx, uint32_t ty) {
 	if (!flag_lock){
-		if(tx >= 96 && tx <= 96+128){
-			if(ty >= 176 && ty <= 176+128){
-				if(!flag_playing){
-					ili9488_draw_pixmap(96, 176, pause_button.width, pause_button.height, pause_button.data);
+		if(flag_door){
+			if(tx >= 96 && tx <= 96+128){
+				if(ty >= 176 && ty <= 176+128){
 					Play_Handler();
-				}
-				else {
-					ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
 				}
 			}
 		}
+		if(tx >= 32 && tx <= 32+64){
+			if(ty >= 10 && ty <= 10+64){
+				Prev_Handler();
+			}
+		}
+		if(tx >= 224 && tx <= 224+64){
+			if(ty >= 10 && ty <= 10+64){
+				Next_Handler();
+			}
+		}
+		if(tx >= 32 && tx <= 32+64){
+			if(ty >= 406 && ty <= 406+64){
+				Lock_Handler();
+			}
+		}
 		//FAZER OUTRAS AREAS DE TOUCH
+	}
+	else{
+		if(tx >= 32 && tx <= 32+64){
+			if(ty >= 406 && ty <= 406+64){
+				Lock_Handler();
+			}
+		}
 	}
 }
 
@@ -444,7 +480,11 @@ void mxt_handler(struct mxt_device *device)
 		sprintf(buf, "Nr: %1d, X:%4d, Y:%4d, Status:0x%2x conv X:%3d Y:%3d\n\r",
 				touch_event.id, touch_event.x, touch_event.y,
 				touch_event.status, conv_x, conv_y);
-		update_screen(conv_x, conv_y);
+				
+		if(touch_event.status == 192){
+			update_screen(conv_x, conv_y);
+		}
+		
 
 		/* Add the new string to the string buffer */
 		strcat(tx_buf, buf);
@@ -475,13 +515,26 @@ int main(void)
 	board_init();  /* Initialize board */
 	
 	configure_lcd();
-	draw_screen();
+
 	
 	RTC_init();
 	BUT_init();
 	mxt_init(&device);
 	
 	stdio_serial_init(USART_SERIAL_EXAMPLE, &usart_serial_options);
+	rtc_disable_interrupt(RTC, RTC_IER_SECEN);
+	rtc_disable_interrupt(RTC, RTC_IER_ALREN);
+	draw_screen();
+	char nome[32];
+	sprintf(nome,"%s",p_ciclo->nome);
+	font_draw_text(&calibri_36, nome, 116, 84, 1);
+	
+	ili9488_draw_filled_rectangle(0, 314, 316, 354);
+	
+	char b3[32];
+	sprintf(b3,"%02d : %02d",(p_ciclo->centrifugacaoTempo + p_ciclo->enxagueTempo), 0);
+	font_draw_text(&calibri_36, b3, 106, 334, 1);
+	
 		
 	while (true) {
 		if (mxt_is_message_pending(&device)) {
@@ -490,12 +543,26 @@ int main(void)
 		if (!flag_lock){
 			if (flag_next){
 				p_ciclo = p_ciclo->next;
-				// APAGA O LUGAR DO NOME E DA PRINT p_ciclo->nome
+				ili9488_draw_filled_rectangle(116, 84, 316, 124);
+				char nome[32];
+				sprintf(nome,"%s",p_ciclo->nome);
+				font_draw_text(&calibri_36, nome, 116, 84, 1);
+				ili9488_draw_pixmap(128, 10, p_ciclo->icon->width, p_ciclo->icon->height, p_ciclo->icon->data);
+				char b3[32];
+				sprintf(b3,"%02d : %02d",(p_ciclo->centrifugacaoTempo + p_ciclo->enxagueTempo), 0);
+				font_draw_text(&calibri_36, b3, 106, 334, 1);
 				flag_next = 0;
 			}
 			if (flag_prev){
 				p_ciclo = p_ciclo->previous;
-				// APAGA O LUGAR DO NOME E DA PRINT p_ciclo->nome
+				ili9488_draw_filled_rectangle(116, 84, 316, 124);
+				char nome[32];
+				sprintf(nome,"%s",p_ciclo->nome);
+				font_draw_text(&calibri_36, nome, 116, 84, 1);
+				ili9488_draw_pixmap(128, 10, p_ciclo->icon->width, p_ciclo->icon->height, p_ciclo->icon->data);
+				char b3[32];
+				sprintf(b3,"%02d : %02d",(p_ciclo->centrifugacaoTempo + p_ciclo->enxagueTempo), 0);
+				font_draw_text(&calibri_36, b3, 106, 334, 1);
 				flag_prev = 0;
 			}
 			if (flag_door){
@@ -504,14 +571,14 @@ int main(void)
 					rtc_enable_interrupt(RTC, RTC_IER_ALREN);
 					rtc_set_time_alarm(RTC, 1, hour, 1, minute + ((p_ciclo->enxagueTempo) + (p_ciclo->centrifugacaoTempo)), 1, second);
 					flag_play = 0;
-					//DRAW PAUSE
+					ili9488_draw_pixmap(96, 176, pause_button.width, pause_button.height, pause_button.data);
 				}
 			}
 			if (flag_rtc_seg){
 				rtc_get_time(RTC,&hour,&minute,&second);
 				char b3[32];
 				sprintf(b3,"%02d : %02d",(p_ciclo->centrifugacaoTempo + p_ciclo->enxagueTempo) - (minute - MINUTE + 1), 60 - (second - SECOND));
-				font_draw_text(&calibri_36, b3, 50, 200, 1); //ACERTAR POSICAO 
+				font_draw_text(&calibri_36, b3, 106, 334, 1);
 				flag_rtc_seg = 0;
 			}
 			if (flag_rtc_ala){
@@ -520,7 +587,7 @@ int main(void)
 				flag_playing = 0;
 				flag_rtc_ala = 0;
 				ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
-				//APAGA TEMPO
+				ili9488_draw_filled_rectangle(0, 334, 316, 384);
 			}
 
 		}
