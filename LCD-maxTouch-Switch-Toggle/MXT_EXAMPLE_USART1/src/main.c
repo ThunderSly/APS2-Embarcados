@@ -109,13 +109,6 @@
 
 #define USART_TX_MAX_LENGTH     0xff
 
-struct ili9488_opt_t g_ili9488_display_opt;
-const uint32_t BUTTON_W = 120;
-const uint32_t BUTTON_H = 150;
-const uint32_t BUTTON_BORDER = 2;
-const uint32_t BUTTON_X = ILI9488_LCD_WIDTH/2;
-const uint32_t BUTTON_Y = ILI9488_LCD_HEIGHT/2;
-
 #define YEAR        2019
 #define MONTH		4
 #define DAY         8
@@ -124,9 +117,22 @@ const uint32_t BUTTON_Y = ILI9488_LCD_HEIGHT/2;
 #define MINUTE      18
 #define SECOND      0
 
+#define BUT_PIO					PIOA
+#define BUT_PIO_ID				ID_PIOA
+#define BUT_PIO_IDX				11
+#define BUT_PIO_IDX_MASK		(1 << BUT_PIO_IDX)
+#define BUT_DEBOUNCING_VALUE    79
+
+struct ili9488_opt_t g_ili9488_display_opt;
+const uint32_t BUTTON_W = 120;
+const uint32_t BUTTON_H = 150;
+const uint32_t BUTTON_BORDER = 2;
+const uint32_t BUTTON_X = ILI9488_LCD_WIDTH/2;
+const uint32_t BUTTON_Y = ILI9488_LCD_HEIGHT/2;
+
 volatile uint8_t flag_rtc_ala = 0;
 volatile uint8_t flag_rtc_seg = 0;
-volatile uint8_t flag_lock = 1;
+volatile uint8_t flag_lock = 0;
 volatile uint8_t flag_door = 0;
 volatile uint8_t flag_play = 0;
 volatile uint8_t flag_next = 0;
@@ -214,12 +220,14 @@ void Lock_Handler(void){
 
 void Door_Handler(void){
 	if (flag_playing){
-		return; //PRINTA ALGUMA COISA
+		 //PRINTA ALGUMA COISA
+		return;
 	}
 	else{
 		flag_door = !flag_door;
+		//DRAW DOOR DIFERENTE COM IF
 	}
-	//DRAW DOOR DIFERENTE COM IF
+	
 }
 
 void Play_Handler(void){
@@ -227,7 +235,15 @@ void Play_Handler(void){
 	flag_playing = 1;
 }
 
-void RTC_init(){
+void Next_Handler(void){
+	flag_next = 1;
+}
+
+void Prev_Handler(void){
+	flag_prev = 1;
+}
+
+void RTC_init(void){
 	/* Configura o PMC */
 	pmc_enable_periph_clk(ID_RTC);
 
@@ -249,6 +265,19 @@ void RTC_init(){
 // 	rtc_enable_interrupt(RTC, RTC_IER_ALREN);
 
 }
+
+void BUT_init(void){
+	
+	pmc_enable_periph_clk(BUT_PIO_ID);
+	pio_set_input(BUT_PIO, BUT_PIO_IDX_MASK, PIO_PULLUP | PIO_DEBOUNCE);
+
+	pio_enable_interrupt(BUT_PIO, BUT_PIO_IDX_MASK);
+	
+	pio_handler_set(BUT_PIO, BUT_PIO_ID, BUT_PIO_IDX_MASK, PIO_IT_FALL_EDGE, Door_Handler);
+	
+	NVIC_EnableIRQ(BUT_PIO_ID);
+	NVIC_SetPriority(BUT_PIO_ID, 1);
+};
 
 static void mxt_init(struct mxt_device *device)
 {
@@ -371,17 +400,19 @@ uint32_t convert_axis_system_y(uint32_t touch_x) {
 }
 
 void update_screen(uint32_t tx, uint32_t ty) {
-	if(tx >= 96 && tx <= 96+128){
-		if(ty >= 176 && ty <= 176+128){
-			if(!flag_playing){
-				ili9488_draw_pixmap(96, 176, pause_button.width, pause_button.height, pause_button.data);
-				Play_Handler();
-			}
-			else {
-				ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
+	if (!flag_lock){
+		if(tx >= 96 && tx <= 96+128){
+			if(ty >= 176 && ty <= 176+128){
+				if(!flag_playing){
+					ili9488_draw_pixmap(96, 176, pause_button.width, pause_button.height, pause_button.data);
+					Play_Handler();
+				}
+				else {
+					ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
+				}
 			}
 		}
-			
+		//FAZER OUTRAS AREAS DE TOUCH
 	}
 }
 
@@ -432,9 +463,7 @@ void mxt_handler(struct mxt_device *device)
 int main(void)
 {
 	t_ciclo *p_ciclo = initMenuOrder();
-	struct mxt_device device; /* Device data container */
-
-	/* Initialize the USART configuration struct */
+	struct mxt_device device;
 	const usart_serial_options_t usart_serial_options = {
 		.baudrate     = USART_SERIAL_EXAMPLE_BAUDRATE,
 		.charlength   = USART_SERIAL_CHAR_LENGTH,
@@ -444,29 +473,29 @@ int main(void)
 
 	sysclk_init(); /* Initialize system clocks */
 	board_init();  /* Initialize board */
+	
 	configure_lcd();
 	draw_screen();
+	
 	RTC_init();
-	/* Initialize the mXT touch device */
+	BUT_init();
 	mxt_init(&device);
 	
-	/* Initialize stdio on USART */
 	stdio_serial_init(USART_SERIAL_EXAMPLE, &usart_serial_options);
 		
-
 	while (true) {
-		/* Check for any pending messages and run message handler if any
-		 * message is found in the queue */
 		if (mxt_is_message_pending(&device)) {
 			mxt_handler(&device);
 		}
-		if (flag_lock){
+		if (!flag_lock){
 			if (flag_next){
 				p_ciclo = p_ciclo->next;
+				// APAGA O LUGAR DO NOME E DA PRINT p_ciclo->nome
 				flag_next = 0;
 			}
 			if (flag_prev){
 				p_ciclo = p_ciclo->previous;
+				// APAGA O LUGAR DO NOME E DA PRINT p_ciclo->nome
 				flag_prev = 0;
 			}
 			if (flag_door){
@@ -482,7 +511,7 @@ int main(void)
 				rtc_get_time(RTC,&hour,&minute,&second);
 				char b3[32];
 				sprintf(b3,"%02d : %02d",(p_ciclo->centrifugacaoTempo + p_ciclo->enxagueTempo) - (minute - MINUTE + 1), 60 - (second - SECOND));
-				font_draw_text(&calibri_36, b3, 50, 200, 1); //ACERTAR POSICAO
+				font_draw_text(&calibri_36, b3, 50, 200, 1); //ACERTAR POSICAO 
 				flag_rtc_seg = 0;
 			}
 			if (flag_rtc_ala){
@@ -491,7 +520,7 @@ int main(void)
 				flag_playing = 0;
 				flag_rtc_ala = 0;
 				ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
-				//DRAW PLAY E APAGA TEMPO
+				//APAGA TEMPO
 			}
 
 		}
