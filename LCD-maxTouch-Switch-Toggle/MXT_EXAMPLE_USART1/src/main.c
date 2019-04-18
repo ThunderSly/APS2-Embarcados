@@ -137,17 +137,23 @@ volatile uint8_t flag_play = 0;
 volatile uint8_t flag_next = 0;
 volatile uint8_t flag_prev = 0;
 volatile uint8_t flag_playing = 0;
+volatile uint8_t flag_pause = 0;
 volatile uint8_t flag_paused = 0;
+volatile uint8_t flag_resumed = 0;
 
 volatile uint32_t hour;
 volatile uint32_t minute;
 volatile uint32_t second;
-volatile uint32_t hour_pause = HOUR;
-volatile uint32_t minute_pause = MINUTE;
-volatile uint32_t second_pause = SECOND;
+volatile uint32_t hour_pause;
+volatile uint32_t minute_pause;
+volatile uint32_t second_pause;
+volatile uint32_t hour_start;
+volatile uint32_t minute_start;
+volatile uint32_t second_start;
 
 volatile uint32_t total_time;
-volatile uint32_t seconds_left = 0;
+volatile uint32_t seconds_left = 59;
+volatile uint32_t time_left;
  
 #include "icones/arrow_left.h"
 #include "icones/arrow_right.h"
@@ -179,7 +185,7 @@ static void configure_lcd(void){
 }
 
 t_ciclo *initMenuOrder(){
-	c_rapido.previous = &c_enxague;
+	c_rapido.previous = &c_centrifuga;
 	c_rapido.next = &c_diario;
 
 	c_diario.previous = &c_rapido;
@@ -253,13 +259,19 @@ void Door_Handler(void){
 
 void Play_Handler(void){
 	if(flag_playing){
+		flag_pause = 1;
 		flag_paused = 1;
 		flag_playing = 0;
+	}
+	else if (flag_paused){
+		flag_paused = 0;
+		flag_playing = 1;
+		flag_resumed = 1;
 	}
 	else{
 		flag_play = 1;
 		flag_playing = 1;
-		flag_paused = 0;
+		
 	}
 }
 
@@ -439,14 +451,14 @@ void update_screen(uint32_t tx, uint32_t ty) {
 				}
 			}
 		}
-		if(!flag_playing || !flag_paused){
+		if(!flag_playing && !flag_paused){
 			if(tx >= 32 && tx <= 32+64){
 				if(ty >= 10 && ty <= 10+64){
 					Prev_Handler();
 				}
 			}
 		}
-		if(!flag_playing || flag_paused){
+		if(!flag_playing && !flag_paused){
 			if(tx >= 224 && tx <= 224+64){
 				if(ty >= 10 && ty <= 10+64){
 					Next_Handler();
@@ -547,9 +559,10 @@ int main(void)
 	font_draw_text(&calibri_36, nome, 116, 84, 1);
 	
 	ili9488_draw_filled_rectangle(0, 314, 316, 354);
-	
+	total_time = (p_ciclo->centrifugacaoTempo + p_ciclo->enxagueTempo);
+	time_left = total_time;
 	char b3[32];
-	sprintf(b3,"%02d : %02d",(p_ciclo->centrifugacaoTempo + p_ciclo->enxagueTempo), 0);
+	sprintf(b3,"%02d : %02d",total_time, 0);
 	font_draw_text(&calibri_36, b3, 106, 334, 1);
 	
 		
@@ -566,6 +579,7 @@ int main(void)
 				font_draw_text(&calibri_36, nome, 116, 84, 1);
 				ili9488_draw_pixmap(128, 10, p_ciclo->icon->width, p_ciclo->icon->height, p_ciclo->icon->data);
 				total_time = (p_ciclo->centrifugacaoTempo + p_ciclo->enxagueTempo);
+				time_left = total_time;
 				char b3[32];
 				sprintf(b3,"%02d : %02d",total_time, 0);
 				font_draw_text(&calibri_36, b3, 106, 334, 1);
@@ -579,6 +593,7 @@ int main(void)
 				font_draw_text(&calibri_36, nome, 116, 84, 1);
 				ili9488_draw_pixmap(128, 10, p_ciclo->icon->width, p_ciclo->icon->height, p_ciclo->icon->data);
 				total_time = (p_ciclo->centrifugacaoTempo + p_ciclo->enxagueTempo);
+				time_left = total_time;
 				char b3[32];
 				sprintf(b3,"%02d : %02d",total_time, 0);
 				font_draw_text(&calibri_36, b3, 106, 334, 1);
@@ -588,25 +603,40 @@ int main(void)
 				if (flag_play){
 					rtc_enable_interrupt(RTC,  RTC_IER_SECEN);
 					rtc_enable_interrupt(RTC, RTC_IER_ALREN);
-					rtc_set_time(RTC, hour_pause, minute_pause, second_pause);
+					rtc_set_time(RTC, HOUR, MINUTE, SECOND);
+					rtc_get_time(RTC, &hour_start, &minute_start, &second_start);
 					rtc_get_time(RTC,&hour,&minute,&second);
-					rtc_set_time_alarm(RTC, 1, hour, 1, minute + total_time, 1, second + seconds_left);
+					rtc_set_time_alarm(RTC, 1, hour, 1, minute + total_time, 1, second);
+					time_left -= 1;
 					flag_play = 0;
 					ili9488_draw_pixmap(96, 176, pause_button.width, pause_button.height, pause_button.data);
 				}
 			}
-			if (flag_paused){
+			if (flag_pause){
+				rtc_get_time(RTC, &hour_pause, &minute_pause, &second_pause);
 				rtc_disable_interrupt(RTC, RTC_IER_SECEN);
 				rtc_disable_interrupt(RTC, RTC_IER_ALREN);
-				rtc_get_time(RTC, &hour_pause, &minute_pause, &second_pause);
-				total_time = total_time - (minute_pause - MINUTE + 1);
-				seconds_left = 59 - (second_pause - SECOND);
+				time_left = time_left - (minute_pause - minute_start);
+				seconds_left = seconds_left - (second_pause - second_start);
+				flag_pause = 0;
+				ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
 			}
-			if(!flag_paused){
+			if (flag_resumed){
+				rtc_enable_interrupt(RTC,  RTC_IER_SECEN);
+				rtc_enable_interrupt(RTC, RTC_IER_ALREN);
+				rtc_get_time(RTC, &hour_start, &minute_start, &second_start);
+				rtc_set_time(RTC,hour_start, minute_start, 59-seconds_left);
+				second_start = 59 - seconds_left;
+				rtc_get_time(RTC,&hour,&minute,&second);
+				rtc_set_time_alarm(RTC, 1, hour, 1, minute + time_left, 1, second + seconds_left);
+				flag_resumed = 0;
+				ili9488_draw_pixmap(96, 176, pause_button.width, pause_button.height, pause_button.data);
+			}
+			if (!flag_paused){
 				if (flag_rtc_seg){
 					rtc_get_time(RTC,&hour,&minute,&second);
 					char b3[32];
-					sprintf(b3,"%02d : %02d",total_time - (minute - MINUTE + 1), 59 - (second - SECOND));
+					sprintf(b3,"%02d : %02d",time_left - (minute - minute_start), seconds_left - (second - second_start));
 					font_draw_text(&calibri_36, b3, 106, 334, 1);
 					flag_rtc_seg = 0;
 				}
@@ -614,9 +644,16 @@ int main(void)
 					rtc_disable_interrupt(RTC, RTC_IER_SECEN);
 					rtc_disable_interrupt(RTC, RTC_IER_ALREN);
 					flag_playing = 0;
+					flag_paused = 0;
 					flag_rtc_ala = 0;
 					ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
 					ili9488_draw_filled_rectangle(0, 334, 316, 384);
+					total_time = (p_ciclo->centrifugacaoTempo + p_ciclo->enxagueTempo);
+					time_left = total_time;
+					seconds_left = 59;
+					char b3[32];
+					sprintf(b3,"%02d : %02d",total_time, 0);
+					font_draw_text(&calibri_36, b3, 106, 334, 1);
 				}
 			}
 
