@@ -131,6 +131,7 @@ const uint32_t BUTTON_Y = ILI9488_LCD_HEIGHT/2;
 
 volatile uint8_t flag_rtc_ala = 0;
 volatile uint8_t flag_rtc_seg = 0;
+volatile uint8_t flag_tc = 0;
 volatile uint8_t flag_rtt = 0;
 volatile uint8_t flag_lock = 0;
 volatile uint8_t flag_door = 0;
@@ -170,6 +171,15 @@ volatile uint32_t time_left;
 #include "icones/enxague.h"
 #include "icones/centrifuga.h"
 
+#include "icones/drop0.h"
+#include "icones/drop1.h"
+#include "icones/drop2.h"
+#include "icones/drop3.h"
+#include "icones/drop4.h"
+#include "icones/drop5.h"
+#include "icones/drop6.h"
+#include "icones/drop7.h"
+
 #include "maquina1.h"
 	
 static void configure_lcd(void){
@@ -204,20 +214,36 @@ t_ciclo *initMenuOrder(){
 	return(&c_diario);
 }
 
-void RTT_Handler(void)
-{
-	uint32_t ul_status;
+// void RTT_Handler(void)
+// {
+// 	uint32_t ul_status;
+// 
+// 	/* Get RTT status */
+// 	ul_status = rtt_get_status(RTT);
+// 
+// 	/* IRQ due to Time has changed */
+// 	if ((ul_status & RTT_SR_RTTINC) == RTT_SR_RTTINC) {  
+// 	}
+// 
+// 	/* IRQ due to Alarm */
+// 	if ((ul_status & RTT_SR_ALMS) == RTT_SR_ALMS) {
+// 		flag_rtt = 1;
+// 	}
+// }
 
-	/* Get RTT status */
-	ul_status = rtt_get_status(RTT);
+void TC0_Handler(void){
+	volatile uint32_t ul_dummy;
 
-	/* IRQ due to Time has changed */
-	if ((ul_status & RTT_SR_RTTINC) == RTT_SR_RTTINC) {  }
+	/****************************************************************
+	* Devemos indicar ao TC que a interrup??o foi satisfeita.
+	******************************************************************/
+	ul_dummy = tc_get_status(TC0, 0);
 
-	/* IRQ due to Alarm */
-	if ((ul_status & RTT_SR_ALMS) == RTT_SR_ALMS) {
-		flag_rtt = 1;
-	}
+	/* Avoid compiler warning */
+	UNUSED(ul_dummy);
+
+	/** Muda o estado do LED */
+	flag_tc = 1;
 }
 
 void RTC_Handler(void){
@@ -300,6 +326,10 @@ void Prev_Handler(void){
 	flag_prev = 1;
 }
 
+void Cancel_Handler(void){
+	flag_rtc_ala = 1;
+}
+
 void RTC_init(void){
 	/* Configura o PMC */
 	pmc_enable_periph_clk(ID_RTC);
@@ -323,24 +353,54 @@ void RTC_init(void){
 
 }
 
-static void RTT_init(uint16_t pllPreScale, uint32_t IrqNPulses){
-	uint32_t ul_previous_time;
+// static void RTT_init(uint16_t pllPreScale, uint32_t IrqNPulses){
+// 	uint32_t ul_previous_time;
+// 
+// 	/* Configure RTT for a 1 second tick interrupt */
+// 	rtt_sel_source(RTT, false);
+// 	rtt_init(RTT, pllPreScale);
+// 	
+// 	ul_previous_time = rtt_read_timer_value(RTT);
+// 	while (ul_previous_time == rtt_read_timer_value(RTT));
+// 	
+// 	rtt_write_alarm_time(RTT, IrqNPulses+ul_previous_time);
+// 
+// 	/* Enable RTT interrupt */
+// 	NVIC_DisableIRQ(RTT_IRQn);
+// 	NVIC_ClearPendingIRQ(RTT_IRQn);
+// 	NVIC_SetPriority(RTT_IRQn, 0);
+// 	NVIC_EnableIRQ(RTT_IRQn);
+// 	rtt_enable_interrupt(RTT, RTT_MR_ALMIEN);
+// }
 
-	/* Configure RTT for a 1 second tick interrupt */
-	rtt_sel_source(RTT, false);
-	rtt_init(RTT, pllPreScale);
-	
-	ul_previous_time = rtt_read_timer_value(RTT);
-	while (ul_previous_time == rtt_read_timer_value(RTT));
-	
-	rtt_write_alarm_time(RTT, IrqNPulses+ul_previous_time);
+void TC_init(Tc * TC, int ID_TC, int TC_CHANNEL, int freq){
+	uint32_t ul_div;
+	uint32_t ul_tcclks;
+	uint32_t ul_sysclk = sysclk_get_cpu_hz();
 
-	/* Enable RTT interrupt */
-	NVIC_DisableIRQ(RTT_IRQn);
-	NVIC_ClearPendingIRQ(RTT_IRQn);
-	NVIC_SetPriority(RTT_IRQn, 0);
-	NVIC_EnableIRQ(RTT_IRQn);
-	rtt_enable_interrupt(RTT, RTT_MR_ALMIEN);
+	uint32_t channel = 1;
+
+	/* Configura o PMC */
+	/* O TimerCounter ? meio confuso
+	o uC possui 3 TCs, cada TC possui 3 canais
+	TC0 : ID_TC0, ID_TC1, ID_TC2
+	TC1 : ID_TC3, ID_TC4, ID_TC5
+	TC2 : ID_TC6, ID_TC7, ID_TC8
+	*/
+	pmc_enable_periph_clk(ID_TC);
+
+	/** Configura o TC para operar em  4Mhz e interrup?c?o no RC compare */
+	tc_find_mck_divisor(freq, ul_sysclk, &ul_div, &ul_tcclks, ul_sysclk);
+	tc_init(TC, TC_CHANNEL, ul_tcclks | TC_CMR_CPCTRG);
+	tc_write_rc(TC, TC_CHANNEL, (ul_sysclk / ul_div) / freq);
+
+	/* Configura e ativa interrup?c?o no TC canal 0 */
+	/* Interrup??o no C */
+	NVIC_EnableIRQ((IRQn_Type) ID_TC);
+	//tc_enable_interrupt(TC, TC_CHANNEL, TC_IER_CPCS);
+
+	/* Inicializa o canal 0 do TC */
+	tc_start(TC, TC_CHANNEL);
 }
 
 void BUT_init(void){
@@ -507,7 +567,10 @@ void update_screen(uint32_t tx, uint32_t ty) {
 				Lock_Handler();
 			}
 		}
-		//FAZER OUTRAS AREAS DE TOUCH
+		if(flag_playing){
+			//CONDICOES DE POSICAO
+			//Cancel_Handler()
+		}
 	}
 	else{
 		if(tx >= 32 && tx <= 32+64){
@@ -584,6 +647,7 @@ int main(void)
 
 	
 	RTC_init();
+	TC_init(TC0,ID_TC0, 0, 15);
 	BUT_init();
 	mxt_init(&device);
 	
@@ -601,6 +665,8 @@ int main(void)
 	char b3[32];
 	sprintf(b3,"%02d : %02d",total_time, 0);
 	font_draw_text(&calibri_36, b3, 106, 334, 1);
+	const tImage* anim_list[8] = {&drop0, &drop1, &drop2, &drop3, &drop4, &drop5, &drop6, &drop7};
+	volatile int icon_counter = 0;
 	
 		
 	while (true) {
@@ -640,27 +706,27 @@ int main(void)
 				if (flag_play){
 					rtc_enable_interrupt(RTC,  RTC_IER_SECEN);
 					rtc_enable_interrupt(RTC, RTC_IER_ALREN);
-					rtt_enable_interrupt(RTT, RTT_MR_ALMIEN);
 					rtc_set_time(RTC, HOUR, MINUTE, SECOND);
 					rtc_get_time(RTC, &hour_start, &minute_start, &second_start);
 					rtc_get_time(RTC,&hour,&minute,&second);
 					rtc_set_time_alarm(RTC, 1, hour, 1, minute + total_time, 1, second);
-					uint16_t pllPreScale = (int) (((float) 32768) / 2.0);
-					uint32_t irqRTTvalue  = 0.5;
-					RTT_init(pllPreScale, irqRTTvalue);
+					tc_enable_interrupt(TC0, 0, TC_IER_CPCS);
 					time_left -= 1;
 					flag_play = 0;
 					ili9488_draw_pixmap(96, 176, pause_button.width, pause_button.height, pause_button.data);
+					ili9488_draw_pixmap(256, 224, anim_list[icon_counter]->width, anim_list[icon_counter]->height, anim_list[icon_counter]->data);
+					//DESENHA CANCEL
+					icon_counter++;
 				}
 			}
-			if (flag_playing){
-				if (flag_rtt){
-					uint16_t pllPreScale = (int) (((float) 32768) / 2.0);
-					uint32_t irqRTTvalue  = 0.5;
-					RTT_init(pllPreScale, irqRTTvalue);
-					//AQUI ROLA A ANIMACAO
-					flag_rtt = 0;
+
+			if (flag_tc){
+				ili9488_draw_pixmap(256, 224, anim_list[icon_counter]->width, anim_list[icon_counter]->height, anim_list[icon_counter]->data);
+				icon_counter++;
+				if(icon_counter > 7){
+					icon_counter = 0;
 				}
+				flag_tc = 0;
 			}
 			if (flag_pause){
 				rtc_get_time(RTC, &hour_pause, &minute_pause, &second_pause);
@@ -668,12 +734,14 @@ int main(void)
 				rtc_disable_interrupt(RTC, RTC_IER_ALREN);
 				time_left = time_left - (minute_pause - minute_start);
 				seconds_left = seconds_left - (second_pause - second_start);
+				tc_disable_interrupt(TC0, 0, TC_IER_CPCS);
 				flag_pause = 0;
 				ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
 			}
 			if (flag_resumed){
 				rtc_enable_interrupt(RTC,  RTC_IER_SECEN);
 				rtc_enable_interrupt(RTC, RTC_IER_ALREN);
+				tc_enable_interrupt(TC0, 0, TC_IER_CPCS);
 				rtc_get_time(RTC, &hour_start, &minute_start, &second_start);
 				rtc_set_time(RTC,hour_start, minute_start, 59-seconds_left);
 				second_start = 59 - seconds_left;
@@ -682,30 +750,31 @@ int main(void)
 				flag_resumed = 0;
 				ili9488_draw_pixmap(96, 176, pause_button.width, pause_button.height, pause_button.data);
 			}
-			if (!flag_paused){
-				if (flag_rtc_seg){
-					rtc_get_time(RTC,&hour,&minute,&second);
-					char b3[32];
-					sprintf(b3,"%02d : %02d",time_left - (minute - minute_start), seconds_left - (second - second_start));
-					font_draw_text(&calibri_36, b3, 106, 334, 1);
-					flag_rtc_seg = 0;
-				}
-				if (flag_rtc_ala){
-					rtc_disable_interrupt(RTC, RTC_IER_SECEN);
-					rtc_disable_interrupt(RTC, RTC_IER_ALREN);
-					flag_playing = 0;
-					flag_paused = 0;
-					flag_rtc_ala = 0;
-					ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
-					ili9488_draw_filled_rectangle(0, 334, 316, 384);
-					total_time = (p_ciclo->centrifugacaoTempo + p_ciclo->enxagueTempo);
-					time_left = total_time;
-					seconds_left = 59;
-					char b3[32];
-					sprintf(b3,"%02d : %02d",total_time, 0);
-					font_draw_text(&calibri_36, b3, 106, 334, 1);
-					//APAGA ANIMACAO
-				}
+			if (flag_rtc_seg){
+				rtc_get_time(RTC,&hour,&minute,&second);
+				char b3[32];
+				sprintf(b3,"%02d : %02d",time_left - (minute - minute_start), seconds_left - (second - second_start));
+				font_draw_text(&calibri_36, b3, 106, 334, 1);
+				flag_rtc_seg = 0;
+			}
+			if (flag_rtc_ala){
+				rtc_disable_interrupt(RTC, RTC_IER_SECEN);
+				rtc_disable_interrupt(RTC, RTC_IER_ALREN);
+				tc_disable_interrupt(TC0, 0, TC_IER_CPCS);
+				flag_playing = 0;
+				flag_paused = 0;
+				flag_rtc_ala = 0;
+				ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
+				ili9488_draw_filled_rectangle(0, 334, 316, 384);
+				total_time = (p_ciclo->centrifugacaoTempo + p_ciclo->enxagueTempo);
+				time_left = total_time;
+				seconds_left = 59;
+				char b3[32];
+				sprintf(b3,"%02d : %02d",total_time, 0);
+				font_draw_text(&calibri_36, b3, 106, 334, 1);
+				ili9488_draw_filled_rectangle(256, 224, 256+32, 224+32);
+				//APAGA CANCEL
+			}
 			}
 
 		}
@@ -717,5 +786,4 @@ int main(void)
 }
 
 //LOCK DPS DE 2 SEGUNDOS
-//ANIMACAO
 //MODO CONFIG
