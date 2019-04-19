@@ -131,6 +131,7 @@ const uint32_t BUTTON_Y = ILI9488_LCD_HEIGHT/2;
 
 volatile uint8_t flag_rtc_ala = 0;
 volatile uint8_t flag_rtc_seg = 0;
+volatile uint8_t flag_rtt = 0;
 volatile uint8_t flag_lock = 0;
 volatile uint8_t flag_door = 0;
 volatile uint8_t flag_play = 0;
@@ -201,6 +202,22 @@ t_ciclo *initMenuOrder(){
 	c_centrifuga.next = &c_rapido;
 
 	return(&c_diario);
+}
+
+void RTT_Handler(void)
+{
+	uint32_t ul_status;
+
+	/* Get RTT status */
+	ul_status = rtt_get_status(RTT);
+
+	/* IRQ due to Time has changed */
+	if ((ul_status & RTT_SR_RTTINC) == RTT_SR_RTTINC) {  }
+
+	/* IRQ due to Alarm */
+	if ((ul_status & RTT_SR_ALMS) == RTT_SR_ALMS) {
+		flag_rtt = 1;
+	}
 }
 
 void RTC_Handler(void){
@@ -304,6 +321,26 @@ void RTC_init(void){
 // 	rtc_enable_interrupt(RTC,  RTC_IER_SECEN);
 // 	rtc_enable_interrupt(RTC, RTC_IER_ALREN);
 
+}
+
+static void RTT_init(uint16_t pllPreScale, uint32_t IrqNPulses){
+	uint32_t ul_previous_time;
+
+	/* Configure RTT for a 1 second tick interrupt */
+	rtt_sel_source(RTT, false);
+	rtt_init(RTT, pllPreScale);
+	
+	ul_previous_time = rtt_read_timer_value(RTT);
+	while (ul_previous_time == rtt_read_timer_value(RTT));
+	
+	rtt_write_alarm_time(RTT, IrqNPulses+ul_previous_time);
+
+	/* Enable RTT interrupt */
+	NVIC_DisableIRQ(RTT_IRQn);
+	NVIC_ClearPendingIRQ(RTT_IRQn);
+	NVIC_SetPriority(RTT_IRQn, 0);
+	NVIC_EnableIRQ(RTT_IRQn);
+	rtt_enable_interrupt(RTT, RTT_MR_ALMIEN);
 }
 
 void BUT_init(void){
@@ -603,13 +640,26 @@ int main(void)
 				if (flag_play){
 					rtc_enable_interrupt(RTC,  RTC_IER_SECEN);
 					rtc_enable_interrupt(RTC, RTC_IER_ALREN);
+					rtt_enable_interrupt(RTT, RTT_MR_ALMIEN);
 					rtc_set_time(RTC, HOUR, MINUTE, SECOND);
 					rtc_get_time(RTC, &hour_start, &minute_start, &second_start);
 					rtc_get_time(RTC,&hour,&minute,&second);
 					rtc_set_time_alarm(RTC, 1, hour, 1, minute + total_time, 1, second);
+					uint16_t pllPreScale = (int) (((float) 32768) / 2.0);
+					uint32_t irqRTTvalue  = 0.5;
+					RTT_init(pllPreScale, irqRTTvalue);
 					time_left -= 1;
 					flag_play = 0;
 					ili9488_draw_pixmap(96, 176, pause_button.width, pause_button.height, pause_button.data);
+				}
+			}
+			if (flag_playing){
+				if (flag_rtt){
+					uint16_t pllPreScale = (int) (((float) 32768) / 2.0);
+					uint32_t irqRTTvalue  = 0.5;
+					RTT_init(pllPreScale, irqRTTvalue);
+					//AQUI ROLA A ANIMACAO
+					flag_rtt = 0;
 				}
 			}
 			if (flag_pause){
@@ -654,6 +704,7 @@ int main(void)
 					char b3[32];
 					sprintf(b3,"%02d : %02d",total_time, 0);
 					font_draw_text(&calibri_36, b3, 106, 334, 1);
+					//APAGA ANIMACAO
 				}
 			}
 
@@ -665,7 +716,6 @@ int main(void)
 	return 0;
 }
 
-// *PAUSE
 //LOCK DPS DE 2 SEGUNDOS
 //ANIMACAO
 //MODO CONFIG
