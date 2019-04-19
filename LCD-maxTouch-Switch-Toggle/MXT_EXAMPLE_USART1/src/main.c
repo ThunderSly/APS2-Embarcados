@@ -245,6 +245,7 @@ void TC0_Handler(void){
 	/** Muda o estado do LED */
 	flag_tc = 1;
 }
+
 void RTC_Handler(void){
 	uint32_t ul_status = rtc_get_status(RTC);
 
@@ -323,6 +324,10 @@ void Next_Handler(void){
 
 void Prev_Handler(void){
 	flag_prev = 1;
+}
+
+void Cancel_Handler(void){
+	flag_rtc_ala = 1;
 }
 
 void RTC_init(void){
@@ -562,7 +567,10 @@ void update_screen(uint32_t tx, uint32_t ty) {
 				Lock_Handler();
 			}
 		}
-		//FAZER OUTRAS AREAS DE TOUCH
+		if(flag_playing){
+			//CONDICOES DE POSICAO
+			//Cancel_Handler()
+		}
 	}
 	else{
 		if(tx >= 32 && tx <= 32+64){
@@ -707,6 +715,7 @@ int main(void)
 					flag_play = 0;
 					ili9488_draw_pixmap(96, 176, pause_button.width, pause_button.height, pause_button.data);
 					ili9488_draw_pixmap(256, 224, anim_list[icon_counter]->width, anim_list[icon_counter]->height, anim_list[icon_counter]->data);
+					//DESENHA CANCEL
 					icon_counter++;
 				}
 			}
@@ -741,31 +750,31 @@ int main(void)
 				flag_resumed = 0;
 				ili9488_draw_pixmap(96, 176, pause_button.width, pause_button.height, pause_button.data);
 			}
-			if (!flag_paused){
-				if (flag_rtc_seg){
-					rtc_get_time(RTC,&hour,&minute,&second);
-					char b3[32];
-					sprintf(b3,"%02d : %02d",time_left - (minute - minute_start), seconds_left - (second - second_start));
-					font_draw_text(&calibri_36, b3, 106, 334, 1);
-					flag_rtc_seg = 0;
-				}
-				if (flag_rtc_ala){
-					rtc_disable_interrupt(RTC, RTC_IER_SECEN);
-					rtc_disable_interrupt(RTC, RTC_IER_ALREN);
-					tc_disable_interrupt(TC0, 0, TC_IER_CPCS);
-					flag_playing = 0;
-					flag_paused = 0;
-					flag_rtc_ala = 0;
-					ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
-					ili9488_draw_filled_rectangle(0, 334, 316, 384);
-					total_time = (p_ciclo->centrifugacaoTempo + p_ciclo->enxagueTempo);
-					time_left = total_time;
-					seconds_left = 59;
-					char b3[32];
-					sprintf(b3,"%02d : %02d",total_time, 0);
-					font_draw_text(&calibri_36, b3, 106, 334, 1);
-					ili9488_draw_filled_rectangle(256, 224, 256+32, 224+32);
-				}
+			if (flag_rtc_seg){
+				rtc_get_time(RTC,&hour,&minute,&second);
+				char b3[32];
+				sprintf(b3,"%02d : %02d",time_left - (minute - minute_start), seconds_left - (second - second_start));
+				font_draw_text(&calibri_36, b3, 106, 334, 1);
+				flag_rtc_seg = 0;
+			}
+			if (flag_rtc_ala){
+				rtc_disable_interrupt(RTC, RTC_IER_SECEN);
+				rtc_disable_interrupt(RTC, RTC_IER_ALREN);
+				tc_disable_interrupt(TC0, 0, TC_IER_CPCS);
+				flag_playing = 0;
+				flag_paused = 0;
+				flag_rtc_ala = 0;
+				ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
+				ili9488_draw_filled_rectangle(0, 334, 316, 384);
+				total_time = (p_ciclo->centrifugacaoTempo + p_ciclo->enxagueTempo);
+				time_left = total_time;
+				seconds_left = 59;
+				char b3[32];
+				sprintf(b3,"%02d : %02d",total_time, 0);
+				font_draw_text(&calibri_36, b3, 106, 334, 1);
+				ili9488_draw_filled_rectangle(256, 224, 256+32, 224+32);
+				//APAGA CANCEL
+			}
 			}
 
 		}
