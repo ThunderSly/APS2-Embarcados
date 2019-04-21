@@ -132,7 +132,6 @@ const uint32_t BUTTON_Y = ILI9488_LCD_HEIGHT/2;
 volatile uint8_t flag_rtc_ala = 0;
 volatile uint8_t flag_rtc_seg = 0;
 volatile uint8_t flag_tc = 0;
-volatile uint8_t flag_rtt = 0;
 volatile uint8_t flag_lock = 0;
 volatile uint8_t flag_door = 0;
 volatile uint8_t flag_play = 0;
@@ -143,6 +142,7 @@ volatile uint8_t flag_pause = 0;
 volatile uint8_t flag_paused = 0;
 volatile uint8_t flag_resumed = 0;
 volatile uint8_t lock_counter = 0;
+volatile uint8_t flag_tela = 0;
 
 volatile uint32_t hour;
 volatile uint32_t minute;
@@ -198,7 +198,7 @@ static void configure_lcd(void){
 }
 
 t_ciclo *initMenuOrder(){
-	c_rapido.previous = &c_centrifuga;
+	c_rapido.previous = &c_custom;
 	c_rapido.next = &c_diario;
 
 	c_diario.previous = &c_rapido;
@@ -211,27 +211,23 @@ t_ciclo *initMenuOrder(){
 	c_enxague.next = &c_centrifuga;
 
 	c_centrifuga.previous = &c_enxague;
-	c_centrifuga.next = &c_rapido;
+	c_centrifuga.next = &c_custom;
+	
+	c_custom.previous = &c_centrifuga;
+	c_custom.next = &c_rapido;
 
 	return(&c_diario);
 }
 
-// void RTT_Handler(void)
-// {
-// 	uint32_t ul_status;
-// 
-// 	/* Get RTT status */
-// 	ul_status = rtt_get_status(RTT);
-// 
-// 	/* IRQ due to Time has changed */
-// 	if ((ul_status & RTT_SR_RTTINC) == RTT_SR_RTTINC) {  
-// 	}
-// 
-// 	/* IRQ due to Alarm */
-// 	if ((ul_status & RTT_SR_ALMS) == RTT_SR_ALMS) {
-// 		flag_rtt = 1;
-// 	}
-// }
+void Lock_Handler(void){
+	flag_lock = !flag_lock;
+	if(flag_lock){
+		ili9488_draw_pixmap(32, 406, locked.width, locked.height, locked.data);
+	}
+	else {
+		ili9488_draw_pixmap(32, 406, unlocked.width, unlocked.height, unlocked.data);
+	}
+}
 
 void TC0_Handler(void){
 	volatile uint32_t ul_dummy;
@@ -261,6 +257,11 @@ void TC1_Handler(void){
 
 	/** Muda o estado do LED */
 	lock_counter +=1;
+	if (flag_lock){
+		if (lock_counter >= 2){
+			Lock_Handler();
+		}
+	}
 }
 
 void RTC_Handler(void){
@@ -288,16 +289,6 @@ void RTC_Handler(void){
 	rtc_clear_status(RTC, RTC_SCCR_CALCLR);
 	rtc_clear_status(RTC, RTC_SCCR_TDERRCLR);
 	
-}
-
-void Lock_Handler(void){
-	flag_lock = !flag_lock;
-	if(flag_lock){			
-		ili9488_draw_pixmap(32, 406, locked.width, locked.height, locked.data);
-	}
-	else {
-		ili9488_draw_pixmap(32, 406, unlocked.width, unlocked.height, unlocked.data);
-	}
 }
 
 void Door_Handler(void){
@@ -537,48 +528,53 @@ uint32_t convert_axis_system_y(uint32_t touch_x) {
 }
 
 void update_screen(uint32_t tx, uint32_t ty) {
-	lock_counter = 0;
-	if (!flag_lock){
-		if(flag_door){
-			if(tx >= 96 && tx <= 96+128){
-				if(ty >= 176 && ty <= 176+128){
-					Play_Handler();
+	if (flag_tela == 0){
+		lock_counter = 0;
+		if (!flag_lock){
+			if(flag_door){
+				if(tx >= 96 && tx <= 96+128){
+					if(ty >= 176 && ty <= 176+128){
+						Play_Handler();
+					}
 				}
 			}
-		}
-		if(!flag_playing && !flag_paused){
+			if(!flag_playing && !flag_paused){
+				if(tx >= 32 && tx <= 32+64){
+					if(ty >= 10 && ty <= 10+64){
+						Prev_Handler();
+					}
+				}
+			}
+			if(!flag_playing && !flag_paused){
+				if(tx >= 224 && tx <= 224+64){
+					if(ty >= 10 && ty <= 10+64){
+						Next_Handler();
+					}
+				}
+			}
 			if(tx >= 32 && tx <= 32+64){
-				if(ty >= 10 && ty <= 10+64){
-					Prev_Handler();
+				if(ty >= 406 && ty <= 406+64){
+					Lock_Handler();
+				}
+			}
+			if(flag_playing || flag_paused){
+				if(tx >= 32 && tx <= 32+32){
+					if(ty >= 224 && ty <= 224+32){
+						Cancel_Handler();
+					}
 				}
 			}
 		}
-		if(!flag_playing && !flag_paused){
-			if(tx >= 224 && tx <= 224+64){
-				if(ty >= 10 && ty <= 10+64){
-					Next_Handler();
-				}
-			}
-		}
-		if(tx >= 32 && tx <= 32+64){
-			if(ty >= 406 && ty <= 406+64){
-				Lock_Handler();
-			}
-		}
-		if(flag_playing || flag_paused){
-			if(tx >= 32 && tx <= 32+32){
-				if(ty >= 224 && ty <= 224+32){
-					Cancel_Handler();
+		else{
+			if(tx >= 32 && tx <= 32+64){
+				if(ty >= 406 && ty <= 406+64){
+					tc_enable_interrupt(TC0, 1, TC_IER_CPCS);
 				}
 			}
 		}
 	}
-	else{
-		if(tx >= 32 && tx <= 32+64){
-			if(ty >= 406 && ty <= 406+64){
-				tc_enable_interrupt(TC0, 1, TC_IER_CPCS);
-			}
-		}
+	if (flag_tela == 1){
+		
 	}
 }
 
@@ -615,9 +611,6 @@ void mxt_handler(struct mxt_device *device)
 			if(conv_y >= 406 && conv_y <= 406+64){
 				if (touch_event.status == 32){
 					tc_disable_interrupt(TC0, 1, TC_IER_CPCS);
-					if (lock_counter >= 2){
-						Lock_Handler();
-					}
 				}
 			}
 		}
