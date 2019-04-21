@@ -142,6 +142,7 @@ volatile uint8_t flag_playing = 0;
 volatile uint8_t flag_pause = 0;
 volatile uint8_t flag_paused = 0;
 volatile uint8_t flag_resumed = 0;
+volatile uint8_t lock_counter = 0;
 
 volatile uint32_t hour;
 volatile uint32_t minute;
@@ -170,6 +171,7 @@ volatile uint32_t time_left;
 #include "icones/diario.h"
 #include "icones/enxague.h"
 #include "icones/centrifuga.h"
+#include "icones/cancel.h"
 
 #include "icones/drop0.h"
 #include "icones/drop1.h"
@@ -244,6 +246,21 @@ void TC0_Handler(void){
 
 	/** Muda o estado do LED */
 	flag_tc = 1;
+}
+
+void TC1_Handler(void){
+	volatile uint32_t ul_dummy;
+
+	/****************************************************************
+	* Devemos indicar ao TC que a interrup??o foi satisfeita.
+	******************************************************************/
+	ul_dummy = tc_get_status(TC0, 1);
+
+	/* Avoid compiler warning */
+	UNUSED(ul_dummy);
+
+	/** Muda o estado do LED */
+	lock_counter +=1;
 }
 
 void RTC_Handler(void){
@@ -352,26 +369,6 @@ void RTC_init(void){
 // 	rtc_enable_interrupt(RTC, RTC_IER_ALREN);
 
 }
-
-// static void RTT_init(uint16_t pllPreScale, uint32_t IrqNPulses){
-// 	uint32_t ul_previous_time;
-// 
-// 	/* Configure RTT for a 1 second tick interrupt */
-// 	rtt_sel_source(RTT, false);
-// 	rtt_init(RTT, pllPreScale);
-// 	
-// 	ul_previous_time = rtt_read_timer_value(RTT);
-// 	while (ul_previous_time == rtt_read_timer_value(RTT));
-// 	
-// 	rtt_write_alarm_time(RTT, IrqNPulses+ul_previous_time);
-// 
-// 	/* Enable RTT interrupt */
-// 	NVIC_DisableIRQ(RTT_IRQn);
-// 	NVIC_ClearPendingIRQ(RTT_IRQn);
-// 	NVIC_SetPriority(RTT_IRQn, 0);
-// 	NVIC_EnableIRQ(RTT_IRQn);
-// 	rtt_enable_interrupt(RTT, RTT_MR_ALMIEN);
-// }
 
 void TC_init(Tc * TC, int ID_TC, int TC_CHANNEL, int freq){
 	uint32_t ul_div;
@@ -540,6 +537,7 @@ uint32_t convert_axis_system_y(uint32_t touch_x) {
 }
 
 void update_screen(uint32_t tx, uint32_t ty) {
+	lock_counter = 0;
 	if (!flag_lock){
 		if(flag_door){
 			if(tx >= 96 && tx <= 96+128){
@@ -567,15 +565,18 @@ void update_screen(uint32_t tx, uint32_t ty) {
 				Lock_Handler();
 			}
 		}
-		if(flag_playing){
-			//CONDICOES DE POSICAO
-			//Cancel_Handler()
+		if(flag_playing || flag_paused){
+			if(tx >= 32 && tx <= 32+32){
+				if(ty >= 224 && ty <= 224+32){
+					Cancel_Handler();
+				}
+			}
 		}
 	}
 	else{
 		if(tx >= 32 && tx <= 32+64){
 			if(ty >= 406 && ty <= 406+64){
-				Lock_Handler();
+				tc_enable_interrupt(TC0, 1, TC_IER_CPCS);
 			}
 		}
 	}
@@ -610,9 +611,21 @@ void mxt_handler(struct mxt_device *device)
 				touch_event.id, touch_event.x, touch_event.y,
 				touch_event.status, conv_x, conv_y);
 				
+		if(conv_x >= 32 && conv_x <= 32+64){
+			if(conv_y >= 406 && conv_y <= 406+64){
+				if (touch_event.status == 32){
+					tc_disable_interrupt(TC0, 1, TC_IER_CPCS);
+					if (lock_counter >= 2){
+						Lock_Handler();
+					}
+				}
+			}
+		}
 		if(touch_event.status == 192){
 			update_screen(conv_x, conv_y);
 		}
+		
+		
 		
 
 		/* Add the new string to the string buffer */
@@ -648,6 +661,7 @@ int main(void)
 	
 	RTC_init();
 	TC_init(TC0,ID_TC0, 0, 15);
+	TC_init(TC0,ID_TC1, 1, 1);
 	BUT_init();
 	mxt_init(&device);
 	
@@ -715,7 +729,7 @@ int main(void)
 					flag_play = 0;
 					ili9488_draw_pixmap(96, 176, pause_button.width, pause_button.height, pause_button.data);
 					ili9488_draw_pixmap(256, 224, anim_list[icon_counter]->width, anim_list[icon_counter]->height, anim_list[icon_counter]->data);
-					//DESENHA CANCEL
+					ili9488_draw_pixmap(32, 224, cancel.width, cancel.height, cancel.data);
 					icon_counter++;
 				}
 			}
@@ -773,9 +787,9 @@ int main(void)
 				sprintf(b3,"%02d : %02d",total_time, 0);
 				font_draw_text(&calibri_36, b3, 106, 334, 1);
 				ili9488_draw_filled_rectangle(256, 224, 256+32, 224+32);
-				//APAGA CANCEL
+				ili9488_draw_filled_rectangle(32, 224, 64+32, 224+32);
 			}
-			}
+			
 
 		}
 				
