@@ -89,6 +89,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include "conf_board.h"
 #include "conf_example.h"
 
@@ -143,6 +144,9 @@ volatile uint8_t flag_paused = 0;
 volatile uint8_t flag_resumed = 0;
 volatile uint8_t lock_counter = 0;
 volatile uint8_t flag_tela = 0;
+volatile uint8_t flag_custom = 0;
+volatile uint8_t flag_swap = 0;
+volatile uint8_t flag_alter = 0;
 
 volatile uint32_t hour;
 volatile uint32_t minute;
@@ -160,10 +164,8 @@ volatile uint32_t time_left;
 
 const int enxague_tempo[4] = {0, 1, 5, 10};
 const int enxague_quant[4] = {0, 1, 2, 3};
-const int centrifugacao_RPM[4] = {0, 600, 900, 1200};
+const int centrifugacao_RPM[4] = {0, 800, 1000, 1200};
 const int centrifugacao_tempo[4] = {0, 1, 5, 10};
-volatile int heavy = 0;
-volatile int bubbles = 0;
 
 volatile uint8_t enxague_tempo_counter = 0;
 volatile uint8_t enxague_quant_counter = 0;
@@ -186,6 +188,10 @@ volatile uint8_t centrifugacao_tempo_counter = 0;
 #include "icones/enxague.h"
 #include "icones/centrifuga.h"
 #include "icones/cancel.h"
+#include "icones/custom.h"
+#include "icones/config.h"
+#include "icones/toggle.h"
+#include "icones/confirm.h"
 
 #include "icones/drop0.h"
 #include "icones/drop1.h"
@@ -307,43 +313,45 @@ void RTC_Handler(void){
 
 void Config_Handler(void){
 	flag_tela = !flag_tela;
+	flag_swap = 1;
 }
 
 void Custom_Handler(int attribute){
 	if (attribute == 0){
 		enxague_tempo_counter ++;
-		if (enxague_tempo_counter > 4){
+		if (enxague_tempo_counter > 3){
 			enxague_tempo_counter = 0;
 		}
 		c_custom.enxagueTempo = enxague_tempo[enxague_tempo_counter];
 	}
 	if (attribute == 1){
 		enxague_quant_counter++;
-		if (enxague_quant_counter > 4){
+		if (enxague_quant_counter > 3){
 			enxague_quant_counter = 0;
 		}
 		c_custom.enxagueQnt = enxague_quant[enxague_quant_counter];
 	}
 	if (attribute == 2){
 		centrifugacao_RPM_counter ++;
-		if (centrifugacao_RPM_counter > 4){
+		if (centrifugacao_RPM_counter > 3){
 			centrifugacao_RPM_counter = 0;
 		}
 		c_custom.centrifugacaoRPM = centrifugacao_RPM[centrifugacao_RPM_counter];
 	}
 	if (attribute == 3){
 		centrifugacao_tempo_counter ++;
-		if (centrifugacao_tempo_counter > 4){
+		if (centrifugacao_tempo_counter > 3){
 			centrifugacao_tempo_counter = 0;
 		}
 		c_custom.centrifugacaoTempo = centrifugacao_tempo[centrifugacao_tempo_counter];
 	}
 	if (attribute == 4){
-		heavy = !heavy;
+		c_custom.heavy = !c_custom.heavy;
 	}
 	if (attribute == 5){
-		bubbles = !bubbles;
+		c_custom.bubblesOn = !c_custom.bubblesOn;
 	}
+	flag_alter = 1;
 }
 
 void Door_Handler(void){
@@ -619,6 +627,15 @@ void update_screen(uint32_t tx, uint32_t ty) {
 					}
 				}
 			}
+			if(!flag_playing && !flag_paused){
+				if(flag_custom){
+					if(tx >= 278 && tx <= 278+32){
+						if(ty >= 84 && ty <= 84+32){
+							Config_Handler();
+						}
+					}
+				}
+			}
 		}
 		else{
 			if(tx >= 32 && tx <= 32+64){
@@ -629,7 +646,66 @@ void update_screen(uint32_t tx, uint32_t ty) {
 		}
 	}
 	if (flag_tela == 1){
-	
+		if(!flag_lock){
+			if(tx >= 128 && tx <= 128+64){
+				if(ty >= 342 && ty <= 342+64){
+					Config_Handler();
+				}
+			}
+			//BOTAO TOGGLE enxagueTempo, so if tela == 2
+			if(tx >= 278 && tx <= 278+32){
+				if(ty >= 104 && ty <= 104+32){
+					Custom_Handler(0);
+				}
+			}
+
+			//BOTAO TOGGLE enxagueQnt, so if tela == 2
+			if(tx >= 278 && tx <= 278+32){
+				if(ty >= 144 && ty <= 144+32){
+					Custom_Handler(1);
+				}
+			}
+
+			//BOTAO TOGGLE centrifugacaoRPM, so if tela == 2
+			if(tx >= 278 && tx <= 278+32){
+				if(ty >= 184 && ty <= 184+32){
+					Custom_Handler(2);
+				}
+			}
+
+			//BOTAO TOGGLE centrifugacaoTempo, so if tela == 2
+			if(tx >= 278 && tx <= 278+32){
+				if(ty >= 224 && ty <= 224+32){
+					Custom_Handler(3);
+				}
+			}
+
+			//BOTAO TOGGLE heavy, so if tela == 2
+			if(tx >= 278 && tx <= 278+32){
+				if(ty >= 264 && ty <= 264+32){
+					Custom_Handler(4);
+				}
+			}
+
+			//BOTAO TOGGLE bubblesOn, so if tela == 2
+			if(tx >= 278 && tx <= 278+32){
+				if(ty >= 304 && ty <= 304+32){
+					Custom_Handler(5);
+				}
+			}
+			if(tx >= 32 && tx <= 32+64){
+				if(ty >= 406 && ty <= 406+64){
+					Lock_Handler();
+				}
+			}
+		}
+		else{
+			if(tx >= 32 && tx <= 32+64){
+				if(ty >= 406 && ty <= 406+64){
+					tc_enable_interrupt(TC0, 1, TC_IER_CPCS);
+				}
+			}
+		}
 	}
 }
 
@@ -722,7 +798,11 @@ int main(void)
 	font_draw_text(&calibri_36, nome, 116, 84, 1);
 	
 	ili9488_draw_filled_rectangle(0, 314, 316, 354);
-	total_time = (p_ciclo->centrifugacaoTempo + p_ciclo->enxagueTempo);
+	total_time = (p_ciclo->centrifugacaoTempo * (!!p_ciclo->centrifugacaoRPM) + p_ciclo->enxagueTempo * p_ciclo->enxagueQnt);
+	if (p_ciclo->heavy){
+		total_time *=1.2;
+		total_time = (int) total_time;
+	}
 	time_left = total_time;
 	char b3[32];
 	sprintf(b3,"%02d : %02d",total_time, 0);
@@ -743,7 +823,19 @@ int main(void)
 				sprintf(nome,"%s",p_ciclo->nome);
 				font_draw_text(&calibri_36, nome, 116, 84, 1);
 				ili9488_draw_pixmap(128, 10, p_ciclo->icon->width, p_ciclo->icon->height, p_ciclo->icon->data);
-				total_time = (p_ciclo->centrifugacaoTempo + p_ciclo->enxagueTempo);
+				if(p_ciclo == &c_custom){
+					flag_custom = 1;
+					ili9488_draw_pixmap(278, 84, config.width, config.height, config.data);
+				}
+				else{
+					flag_custom = 0;
+					ili9488_draw_filled_rectangle(278, 84, 278 + 64, 84 + 64);
+				}
+				total_time = (p_ciclo->centrifugacaoTempo * (!!p_ciclo->centrifugacaoRPM) + p_ciclo->enxagueTempo * p_ciclo->enxagueQnt);
+				if (p_ciclo->heavy){
+					total_time *=1.2;
+					total_time = (int) total_time;
+				}
 				time_left = total_time;
 				char b3[32];
 				sprintf(b3,"%02d : %02d",total_time, 0);
@@ -757,7 +849,19 @@ int main(void)
 				sprintf(nome,"%s",p_ciclo->nome);
 				font_draw_text(&calibri_36, nome, 116, 84, 1);
 				ili9488_draw_pixmap(128, 10, p_ciclo->icon->width, p_ciclo->icon->height, p_ciclo->icon->data);
-				total_time = (p_ciclo->centrifugacaoTempo + p_ciclo->enxagueTempo);
+				if(p_ciclo == &c_custom){
+					flag_custom = 1;
+					ili9488_draw_pixmap(278, 84, config.width, config.height, config.data);
+				}
+				else{
+					flag_custom = 0;
+					ili9488_draw_filled_rectangle(278, 84, 278 + 32, 84 + 32);
+				}
+				total_time = (p_ciclo->centrifugacaoTempo * (!!p_ciclo->centrifugacaoRPM) + p_ciclo->enxagueTempo * p_ciclo->enxagueQnt);
+				if (p_ciclo->heavy){
+					total_time *=1.2;
+					total_time = (int) total_time;
+				}
 				time_left = total_time;
 				char b3[32];
 				sprintf(b3,"%02d : %02d",total_time, 0);
@@ -766,19 +870,25 @@ int main(void)
 			}
 			if (flag_door){
 				if (flag_play){
-					rtc_enable_interrupt(RTC,  RTC_IER_SECEN);
-					rtc_enable_interrupt(RTC, RTC_IER_ALREN);
-					rtc_set_time(RTC, HOUR, MINUTE, SECOND);
-					rtc_get_time(RTC, &hour_start, &minute_start, &second_start);
-					rtc_get_time(RTC,&hour,&minute,&second);
-					rtc_set_time_alarm(RTC, 1, hour, 1, minute + total_time, 1, second);
-					tc_enable_interrupt(TC0, 0, TC_IER_CPCS);
-					time_left -= 1;
-					flag_play = 0;
-					ili9488_draw_pixmap(96, 176, pause_button.width, pause_button.height, pause_button.data);
-					ili9488_draw_pixmap(256, 224, anim_list[icon_counter]->width, anim_list[icon_counter]->height, anim_list[icon_counter]->data);
-					ili9488_draw_pixmap(32, 224, cancel.width, cancel.height, cancel.data);
-					icon_counter++;
+					if (time_left > 0){
+						rtc_enable_interrupt(RTC,  RTC_IER_SECEN);
+						rtc_enable_interrupt(RTC, RTC_IER_ALREN);
+						rtc_set_time(RTC, HOUR, MINUTE, SECOND);
+						rtc_get_time(RTC, &hour_start, &minute_start, &second_start);
+						rtc_get_time(RTC,&hour,&minute,&second);
+						rtc_set_time_alarm(RTC, 1, hour, 1, minute + total_time, 1, second);
+						tc_enable_interrupt(TC0, 0, TC_IER_CPCS);
+						time_left -= 1;
+						flag_play = 0;
+						ili9488_draw_pixmap(96, 176, pause_button.width, pause_button.height, pause_button.data);
+						ili9488_draw_pixmap(256, 224, anim_list[icon_counter]->width, anim_list[icon_counter]->height, anim_list[icon_counter]->data);
+						ili9488_draw_pixmap(32, 224, cancel.width, cancel.height, cancel.data);
+						icon_counter++;
+					}
+					else{
+						flag_play = 0;
+						flag_rtc_ala = 1;
+					}
 				}
 			}
 
@@ -828,7 +938,11 @@ int main(void)
 				flag_rtc_ala = 0;
 				ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
 				ili9488_draw_filled_rectangle(0, 334, 316, 384);
-				total_time = (p_ciclo->centrifugacaoTempo + p_ciclo->enxagueTempo);
+				total_time = (p_ciclo->centrifugacaoTempo * (!!p_ciclo->centrifugacaoRPM) + p_ciclo->enxagueTempo * p_ciclo->enxagueQnt);
+				if (p_ciclo->heavy){
+					total_time *=1.2;
+					total_time = (int) total_time;
+				}
 				time_left = total_time;
 				seconds_left = 59;
 				char b3[32];
@@ -836,6 +950,116 @@ int main(void)
 				font_draw_text(&calibri_36, b3, 106, 334, 1);
 				ili9488_draw_filled_rectangle(256, 224, 256+32, 224+32);
 				ili9488_draw_filled_rectangle(32, 224, 64+32, 224+32);
+			}
+			
+			if (flag_swap){
+				if (flag_tela){
+					ili9488_draw_filled_rectangle(0, 0, ILI9488_LCD_WIDTH-1, 406);
+					char e_tempo[32];
+					sprintf(e_tempo,"%d",p_ciclo->enxagueTempo);
+					font_draw_text(&calibri_36, e_tempo, 116, 104, 1);
+					// enxagueTempo TOGGLE (IMAGEM)
+					ili9488_draw_pixmap(278, 104, toggle.width, toggle.height, toggle.data);
+
+					// enxagueQnt TEXTO
+					char e_qnt[32];
+					sprintf(e_qnt,"%d",p_ciclo->enxagueQnt);
+					font_draw_text(&calibri_36, e_qnt, 116, 144, 1);
+					// enxagueQnt TOGGLE (IMAGEM)
+					ili9488_draw_pixmap(278, 144, toggle.width, toggle.height, toggle.data);
+
+					// centrifugacaoRPM TEXTO
+					char c_rpm[32];
+					sprintf(c_rpm,"%d",p_ciclo->centrifugacaoRPM);
+					font_draw_text(&calibri_36, c_rpm, 116, 184, 1);
+					// centrifugacaoRPM TOGGLE (IMAGEM)
+					ili9488_draw_pixmap(278, 184, toggle.width, toggle.height, toggle.data);
+
+					// centrifugacaoTempo TEXTO
+					char c_tempo[321];
+					sprintf(c_tempo,"%d",p_ciclo->centrifugacaoTempo);
+					font_draw_text(&calibri_36, c_tempo, 116, 224, 1);
+					// centrifugacaoTempo TOGGLE (IMAGEM)
+					ili9488_draw_pixmap(278, 224, toggle.width, toggle.height, toggle.data);
+
+					// heavy TEXTO
+					char heavy[32];
+					sprintf(heavy,"%d",p_ciclo->heavy);
+					font_draw_text(&calibri_36, heavy, 116, 264, 1);
+					// heavy TOGGLE (IMAGEM)
+					ili9488_draw_pixmap(278, 264, toggle.width, toggle.height, toggle.data);
+
+					// bubblesOn TEXTO
+					char bubbles[32];
+					sprintf(bubbles,"%d",p_ciclo->bubblesOn);
+					font_draw_text(&calibri_36, bubbles, 116, 304, 1);
+					// bubblesOn TOGGLE (IMAGEM)
+					ili9488_draw_pixmap(278, 304, toggle.width, toggle.height, toggle.data);
+					ili9488_draw_pixmap(128, 342, confirm.width, confirm.height, confirm.data);
+				}
+				else{
+					ili9488_draw_filled_rectangle(0, 0, ILI9488_LCD_WIDTH-1, ILI9488_LCD_HEIGHT-1);
+					ili9488_draw_pixmap(32, 10, arrow_left.width, arrow_left.height, arrow_left.data);
+					ili9488_draw_pixmap(224, 10, arrow_right.width, arrow_right.height, arrow_right.data);
+					ili9488_draw_pixmap(128, 10, p_ciclo->icon->width, p_ciclo->icon->height, p_ciclo->icon->data);
+					if(!flag_lock){
+						ili9488_draw_pixmap(32, 406, unlocked.width, unlocked.height, unlocked.data);
+					}
+					else{
+						ili9488_draw_pixmap(32, 406, locked.width, locked.height, locked.data);
+					}
+					if(flag_door){
+						ili9488_draw_pixmap(224, 406, closed_door.width, closed_door.height, closed_door.data);
+					}
+					else{
+						ili9488_draw_pixmap(32, 406, opened_door.width, opened_door.height, opened_door.data);
+					}
+					ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
+					char modo[32];
+					sprintf(modo,"Modo:");
+					font_draw_text(&calibri_36, modo, 10, 84, 1);
+					char nome[32];
+					sprintf(nome,"%s",p_ciclo->nome);
+					font_draw_text(&calibri_36, nome, 116, 84, 1);
+					total_time = (p_ciclo->centrifugacaoTempo * (!!p_ciclo->centrifugacaoRPM) + p_ciclo->enxagueTempo * p_ciclo->enxagueQnt);
+					if (p_ciclo->heavy){
+						total_time *=1.2;
+						total_time = (int) total_time;
+					}
+					time_left = total_time;
+					char b3[32];
+					sprintf(b3,"%02d : %02d",total_time, 0);
+					font_draw_text(&calibri_36, b3, 106, 334, 1);
+					ili9488_draw_pixmap(278, 84, config.width, config.height, config.data);
+				}
+				flag_swap = 0;
+			}
+			if (flag_alter){
+					ili9488_draw_filled_rectangle(116, 104, 250 , 336);
+					char e_tempo[32];
+					sprintf(e_tempo,"%d",p_ciclo->enxagueTempo);
+					font_draw_text(&calibri_36, e_tempo, 116, 104, 1);
+
+					char e_qnt[32];
+					sprintf(e_qnt,"%d",p_ciclo->enxagueQnt);
+					font_draw_text(&calibri_36, e_qnt, 116, 144, 1);
+
+					char c_rpm[32];
+					sprintf(c_rpm,"%d",p_ciclo->centrifugacaoRPM);
+					font_draw_text(&calibri_36, c_rpm, 116, 184, 1);
+
+					char c_tempo[321];
+					sprintf(c_tempo,"%d",p_ciclo->centrifugacaoTempo);
+					font_draw_text(&calibri_36, c_tempo, 116, 224, 1);
+
+					char heavy[32];
+					sprintf(heavy,"%d",p_ciclo->heavy);
+					font_draw_text(&calibri_36, heavy, 116, 264, 1);
+
+					char bubbles[32];
+					sprintf(bubbles,"%d",p_ciclo->bubblesOn);
+					font_draw_text(&calibri_36, bubbles, 116, 304, 1);
+				flag_alter = 0;
 			}
 			
 
@@ -847,5 +1071,4 @@ int main(void)
 	return 0;
 }
 
-//LOCK DPS DE 2 SEGUNDOS
 //MODO CONFIG

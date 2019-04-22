@@ -72,6 +72,17 @@ t_ciclo c_centrifuga = {
     .icon = &centrifuga,
 };
 
+t_ciclo c_custom = {
+	.nome = "Custom",
+	.enxagueTempo = 0,
+	.enxagueQnt = 0,
+	.centrifugacaoRPM = 0,
+	.centrifugacaoTempo = 0,
+	.heavy = 0,
+	.bubblesOn = 0,
+	.icon = &custom,
+};
+
 t_ciclo *initMenuOrder();
 
 #endif
