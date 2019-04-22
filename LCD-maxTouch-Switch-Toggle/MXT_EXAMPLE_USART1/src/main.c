@@ -815,6 +815,16 @@ int main(void)
 		if (mxt_is_message_pending(&device)) {
 			mxt_handler(&device);
 		}
+		if(flag_tela == 0){
+			if (flag_tc){
+				ili9488_draw_pixmap(256, 224, anim_list[icon_counter]->width, anim_list[icon_counter]->height, anim_list[icon_counter]->data);
+				icon_counter++;
+				if(icon_counter > 7){
+					icon_counter = 0;
+				}
+				flag_tc = 0;
+			}
+		}
 		if (!flag_lock){
 			if (flag_next){
 				p_ciclo = p_ciclo->next;
@@ -891,15 +901,6 @@ int main(void)
 					}
 				}
 			}
-
-			if (flag_tc){
-				ili9488_draw_pixmap(256, 224, anim_list[icon_counter]->width, anim_list[icon_counter]->height, anim_list[icon_counter]->data);
-				icon_counter++;
-				if(icon_counter > 7){
-					icon_counter = 0;
-				}
-				flag_tc = 0;
-			}
 			if (flag_pause){
 				rtc_get_time(RTC, &hour_pause, &minute_pause, &second_pause);
 				rtc_disable_interrupt(RTC, RTC_IER_SECEN);
@@ -922,35 +923,7 @@ int main(void)
 				flag_resumed = 0;
 				ili9488_draw_pixmap(96, 176, pause_button.width, pause_button.height, pause_button.data);
 			}
-			if (flag_rtc_seg){
-				rtc_get_time(RTC,&hour,&minute,&second);
-				char b3[32];
-				sprintf(b3,"%02d : %02d",time_left - (minute - minute_start), seconds_left - (second - second_start));
-				font_draw_text(&calibri_36, b3, 106, 334, 1);
-				flag_rtc_seg = 0;
-			}
-			if (flag_rtc_ala){
-				rtc_disable_interrupt(RTC, RTC_IER_SECEN);
-				rtc_disable_interrupt(RTC, RTC_IER_ALREN);
-				tc_disable_interrupt(TC0, 0, TC_IER_CPCS);
-				flag_playing = 0;
-				flag_paused = 0;
-				flag_rtc_ala = 0;
-				ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
-				ili9488_draw_filled_rectangle(0, 334, 316, 384);
-				total_time = (p_ciclo->centrifugacaoTempo * (!!p_ciclo->centrifugacaoRPM) + p_ciclo->enxagueTempo * p_ciclo->enxagueQnt);
-				if (p_ciclo->heavy){
-					total_time *=1.2;
-					total_time = (int) total_time;
-				}
-				time_left = total_time;
-				seconds_left = 59;
-				char b3[32];
-				sprintf(b3,"%02d : %02d",total_time, 0);
-				font_draw_text(&calibri_36, b3, 106, 334, 1);
-				ili9488_draw_filled_rectangle(256, 224, 256+32, 224+32);
-				ili9488_draw_filled_rectangle(32, 224, 64+32, 224+32);
-			}
+
 			
 			if (flag_swap){
 				if (flag_tela){
@@ -1063,6 +1036,35 @@ int main(void)
 			}
 			
 
+		}
+		if (flag_rtc_seg){
+			rtc_get_time(RTC,&hour,&minute,&second);
+			char b3[32];
+			sprintf(b3,"%02d : %02d",time_left - (minute - minute_start), seconds_left - (second - second_start));
+			font_draw_text(&calibri_36, b3, 106, 334, 1);
+			flag_rtc_seg = 0;
+		}
+		if (flag_rtc_ala){
+			rtc_disable_interrupt(RTC, RTC_IER_SECEN);
+			rtc_disable_interrupt(RTC, RTC_IER_ALREN);
+			tc_disable_interrupt(TC0, 0, TC_IER_CPCS);
+			flag_playing = 0;
+			flag_paused = 0;
+			flag_rtc_ala = 0;
+			ili9488_draw_pixmap(96, 176, play_button.width, play_button.height, play_button.data);
+			ili9488_draw_filled_rectangle(0, 334, 316, 384);
+			total_time = (p_ciclo->centrifugacaoTempo * (!!p_ciclo->centrifugacaoRPM) + p_ciclo->enxagueTempo * p_ciclo->enxagueQnt);
+			if (p_ciclo->heavy){
+				total_time *=1.2;
+				total_time = (int) total_time;
+			}
+			time_left = total_time;
+			seconds_left = 59;
+			char b3[32];
+			sprintf(b3,"%02d : %02d",total_time, 0);
+			font_draw_text(&calibri_36, b3, 106, 334, 1);
+			ili9488_draw_filled_rectangle(256, 224, 256+32, 224+32);
+			ili9488_draw_filled_rectangle(32, 224, 64+32, 224+32);
 		}
 				
 		
