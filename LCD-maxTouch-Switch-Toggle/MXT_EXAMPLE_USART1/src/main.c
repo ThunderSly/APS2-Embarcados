@@ -157,6 +157,20 @@ volatile uint32_t second_start;
 volatile uint32_t total_time;
 volatile uint32_t seconds_left = 59;
 volatile uint32_t time_left;
+
+const int enxague_tempo[4] = {0, 1, 5, 10};
+const int enxague_quant[4] = {0, 1, 2, 3};
+const int centrifugacao_RPM[4] = {0, 600, 900, 1200};
+const int centrifugacao_tempo[4] = {0, 1, 5, 10};
+volatile int heavy = 0;
+volatile int bubbles = 0;
+
+volatile uint8_t enxague_tempo_counter = 0;
+volatile uint8_t enxague_quant_counter = 0;
+volatile uint8_t centrifugacao_RPM_counter = 0;
+volatile uint8_t centrifugacao_tempo_counter = 0;
+
+
  
 #include "icones/arrow_left.h"
 #include "icones/arrow_right.h"
@@ -289,6 +303,47 @@ void RTC_Handler(void){
 	rtc_clear_status(RTC, RTC_SCCR_CALCLR);
 	rtc_clear_status(RTC, RTC_SCCR_TDERRCLR);
 	
+}
+
+void Config_Handler(void){
+	flag_tela = !flag_tela;
+}
+
+void Custom_Handler(int attribute){
+	if (attribute == 0){
+		enxague_tempo_counter ++;
+		if (enxague_tempo_counter > 4){
+			enxague_tempo_counter = 0;
+		}
+		c_custom.enxagueTempo = enxague_tempo[enxague_tempo_counter];
+	}
+	if (attribute == 1){
+		enxague_quant_counter++;
+		if (enxague_quant_counter > 4){
+			enxague_quant_counter = 0;
+		}
+		c_custom.enxagueQnt = enxague_quant[enxague_quant_counter];
+	}
+	if (attribute == 2){
+		centrifugacao_RPM_counter ++;
+		if (centrifugacao_RPM_counter > 4){
+			centrifugacao_RPM_counter = 0;
+		}
+		c_custom.centrifugacaoRPM = centrifugacao_RPM[centrifugacao_RPM_counter];
+	}
+	if (attribute == 3){
+		centrifugacao_tempo_counter ++;
+		if (centrifugacao_tempo_counter > 4){
+			centrifugacao_tempo_counter = 0;
+		}
+		c_custom.centrifugacaoTempo = centrifugacao_tempo[centrifugacao_tempo_counter];
+	}
+	if (attribute == 4){
+		heavy = !heavy;
+	}
+	if (attribute == 5){
+		bubbles = !bubbles;
+	}
 }
 
 void Door_Handler(void){
@@ -574,7 +629,7 @@ void update_screen(uint32_t tx, uint32_t ty) {
 		}
 	}
 	if (flag_tela == 1){
-		
+	
 	}
 }
 
