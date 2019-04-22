@@ -591,8 +591,8 @@ uint32_t convert_axis_system_y(uint32_t touch_x) {
 }
 
 void update_screen(uint32_t tx, uint32_t ty) {
+	lock_counter = 0;
 	if (flag_tela == 0){
-		lock_counter = 0;
 		if (!flag_lock){
 			if(flag_door){
 				if(tx >= 96 && tx <= 96+128){
