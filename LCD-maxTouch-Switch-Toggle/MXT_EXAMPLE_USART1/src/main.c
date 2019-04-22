@@ -927,45 +927,45 @@ int main(void)
 			
 			if (flag_swap){
 				if (flag_tela){
-					ili9488_draw_filled_rectangle(0, 0, ILI9488_LCD_WIDTH-1, 406);
+					ili9488_draw_filled_rectangle(0, 84, ILI9488_LCD_WIDTH-1, 406);
 					char e_tempo[32];
-					sprintf(e_tempo,"%d",p_ciclo->enxagueTempo);
-					font_draw_text(&calibri_36, e_tempo, 116, 104, 1);
+					sprintf(e_tempo,"Tmp Enx: %d",p_ciclo->enxagueTempo);
+					font_draw_text(&calibri_36, e_tempo, 10, 104, 1);
 					// enxagueTempo TOGGLE (IMAGEM)
 					ili9488_draw_pixmap(278, 104, toggle.width, toggle.height, toggle.data);
 
 					// enxagueQnt TEXTO
 					char e_qnt[32];
-					sprintf(e_qnt,"%d",p_ciclo->enxagueQnt);
-					font_draw_text(&calibri_36, e_qnt, 116, 144, 1);
+					sprintf(e_qnt,"Qnt Enx: %d",p_ciclo->enxagueQnt);
+					font_draw_text(&calibri_36, e_qnt, 10, 144, 1);
 					// enxagueQnt TOGGLE (IMAGEM)
 					ili9488_draw_pixmap(278, 144, toggle.width, toggle.height, toggle.data);
 
 					// centrifugacaoRPM TEXTO
 					char c_rpm[32];
-					sprintf(c_rpm,"%d",p_ciclo->centrifugacaoRPM);
-					font_draw_text(&calibri_36, c_rpm, 116, 184, 1);
+					sprintf(c_rpm,"RPM: %d",p_ciclo->centrifugacaoRPM);
+					font_draw_text(&calibri_36, c_rpm, 10, 184, 1);
 					// centrifugacaoRPM TOGGLE (IMAGEM)
 					ili9488_draw_pixmap(278, 184, toggle.width, toggle.height, toggle.data);
 
 					// centrifugacaoTempo TEXTO
 					char c_tempo[321];
-					sprintf(c_tempo,"%d",p_ciclo->centrifugacaoTempo);
-					font_draw_text(&calibri_36, c_tempo, 116, 224, 1);
+					sprintf(c_tempo,"Tmp Centr: %d",p_ciclo->centrifugacaoTempo);
+					font_draw_text(&calibri_36, c_tempo, 10, 224, 1);
 					// centrifugacaoTempo TOGGLE (IMAGEM)
 					ili9488_draw_pixmap(278, 224, toggle.width, toggle.height, toggle.data);
 
 					// heavy TEXTO
 					char heavy[32];
-					sprintf(heavy,"%d",p_ciclo->heavy);
-					font_draw_text(&calibri_36, heavy, 116, 264, 1);
+					sprintf(heavy,"Pesado: %d",p_ciclo->heavy);
+					font_draw_text(&calibri_36, heavy, 10, 264, 1);
 					// heavy TOGGLE (IMAGEM)
 					ili9488_draw_pixmap(278, 264, toggle.width, toggle.height, toggle.data);
 
 					// bubblesOn TEXTO
 					char bubbles[32];
-					sprintf(bubbles,"%d",p_ciclo->bubblesOn);
-					font_draw_text(&calibri_36, bubbles, 116, 304, 1);
+					sprintf(bubbles,"Bolhas: %d",p_ciclo->bubblesOn);
+					font_draw_text(&calibri_36, bubbles, 10, 304, 1);
 					// bubblesOn TOGGLE (IMAGEM)
 					ili9488_draw_pixmap(278, 304, toggle.width, toggle.height, toggle.data);
 					ili9488_draw_pixmap(128, 342, confirm.width, confirm.height, confirm.data);
@@ -1010,28 +1010,28 @@ int main(void)
 			if (flag_alter){
 					ili9488_draw_filled_rectangle(116, 104, 250 , 336);
 					char e_tempo[32];
-					sprintf(e_tempo,"%d",p_ciclo->enxagueTempo);
-					font_draw_text(&calibri_36, e_tempo, 116, 104, 1);
+					sprintf(e_tempo,"Tmp Enx: %d",p_ciclo->enxagueTempo);
+					font_draw_text(&calibri_36, e_tempo, 10, 104, 1);
 
 					char e_qnt[32];
-					sprintf(e_qnt,"%d",p_ciclo->enxagueQnt);
-					font_draw_text(&calibri_36, e_qnt, 116, 144, 1);
+					sprintf(e_qnt,"Qnt Enx: %d",p_ciclo->enxagueQnt);
+					font_draw_text(&calibri_36, e_qnt, 10, 144, 1);
 
 					char c_rpm[32];
-					sprintf(c_rpm,"%d",p_ciclo->centrifugacaoRPM);
-					font_draw_text(&calibri_36, c_rpm, 116, 184, 1);
+					sprintf(c_rpm,"RPM: %d",p_ciclo->centrifugacaoRPM);
+					font_draw_text(&calibri_36, c_rpm, 10, 184, 1);
 
 					char c_tempo[321];
-					sprintf(c_tempo,"%d",p_ciclo->centrifugacaoTempo);
-					font_draw_text(&calibri_36, c_tempo, 116, 224, 1);
+					sprintf(c_tempo,"Tmp Centr: %d",p_ciclo->centrifugacaoTempo);
+					font_draw_text(&calibri_36, c_tempo, 10, 224, 1);
 
 					char heavy[32];
-					sprintf(heavy,"%d",p_ciclo->heavy);
-					font_draw_text(&calibri_36, heavy, 116, 264, 1);
+					sprintf(heavy,"Pesado: %d",p_ciclo->heavy);
+					font_draw_text(&calibri_36, heavy, 10, 264, 1);
 
 					char bubbles[32];
-					sprintf(bubbles,"%d",p_ciclo->bubblesOn);
-					font_draw_text(&calibri_36, bubbles, 116, 304, 1);
+					sprintf(bubbles,"Bolhas: %d",p_ciclo->bubblesOn);
+					font_draw_text(&calibri_36, bubbles, 10, 304, 1);
 				flag_alter = 0;
 			}
 			
