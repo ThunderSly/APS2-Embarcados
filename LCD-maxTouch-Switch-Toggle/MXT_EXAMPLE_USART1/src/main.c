@@ -816,13 +816,15 @@ int main(void)
 			mxt_handler(&device);
 		}
 		if(flag_tela == 0){
-			if (flag_tc){
-				ili9488_draw_pixmap(256, 224, anim_list[icon_counter]->width, anim_list[icon_counter]->height, anim_list[icon_counter]->data);
-				icon_counter++;
-				if(icon_counter > 7){
-					icon_counter = 0;
+			if(flag_playing){
+				if (flag_tc){
+					ili9488_draw_pixmap(256, 224, anim_list[icon_counter]->width, anim_list[icon_counter]->height, anim_list[icon_counter]->data);
+					icon_counter++;
+					if(icon_counter > 7){
+						icon_counter = 0;
+					}
+					flag_tc = 0;
 				}
-				flag_tc = 0;
 			}
 		}
 		if (!flag_lock){
