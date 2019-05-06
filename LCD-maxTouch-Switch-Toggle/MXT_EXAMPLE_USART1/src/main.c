@@ -566,12 +566,16 @@ void update_screen(uint32_t tx, uint32_t ty) {
 	if (flag_tela == 0){
 		if (!flag_lock){
 			if(flag_door){
+				
+				//Play Button
 				if(tx >= 96 && tx <= 96+128){
 					if(ty >= 176 && ty <= 176+128){
 						Play_Handler();
 					}
 				}
 			}
+			
+			//Previous Button
 			if(!flag_playing && !flag_paused){
 				if(tx >= 32 && tx <= 32+64){
 					if(ty >= 10 && ty <= 10+64){
@@ -579,6 +583,8 @@ void update_screen(uint32_t tx, uint32_t ty) {
 					}
 				}
 			}
+			
+			//Next Button
 			if(!flag_playing && !flag_paused){
 				if(tx >= 224 && tx <= 224+64){
 					if(ty >= 10 && ty <= 10+64){
@@ -586,11 +592,15 @@ void update_screen(uint32_t tx, uint32_t ty) {
 					}
 				}
 			}
+			
+			//Lock Button
 			if(tx >= 32 && tx <= 32+64){
 				if(ty >= 406 && ty <= 406+64){
 					Lock_Handler();
 				}
 			}
+			
+			//Cancel Button
 			if(flag_playing || flag_paused){
 				if(tx >= 32 && tx <= 32+32){
 					if(ty >= 224 && ty <= 224+32){
@@ -598,6 +608,8 @@ void update_screen(uint32_t tx, uint32_t ty) {
 					}
 				}
 			}
+			
+			//Custom Button
 			if(!flag_playing && !flag_paused){
 				if(flag_custom){
 					if(tx >= 278 && tx <= 278+32){
@@ -608,6 +620,8 @@ void update_screen(uint32_t tx, uint32_t ty) {
 				}
 			}
 		}
+		
+		//Unlock Button
 		else{
 			if(tx >= 32 && tx <= 32+64){
 				if(ty >= 406 && ty <= 406+64){
@@ -618,58 +632,64 @@ void update_screen(uint32_t tx, uint32_t ty) {
 	}
 	if (flag_tela == 1){
 		if(!flag_lock){
+			
+			//Return Button
 			if(tx >= 128 && tx <= 128+64){
 				if(ty >= 342 && ty <= 342+64){
 					Config_Handler();
 				}
 			}
-			//BOTAO TOGGLE enxagueTempo, so if tela == 2
+			//BOTAO TOGGLE enxagueTempo, so if tela == 1
 			if(tx >= 278 && tx <= 278+32){
 				if(ty >= 104 && ty <= 104+32){
 					Custom_Handler(AT_ENXAGUE_TEMPO);
 				}
 			}
 
-			//BOTAO TOGGLE enxagueQnt, so if tela == 2
+			//BOTAO TOGGLE enxagueQnt, so if tela == 1
 			if(tx >= 278 && tx <= 278+32){
 				if(ty >= 144 && ty <= 144+32){
 					Custom_Handler(AT_ENXAGUE_QNT);
 				}
 			}
 
-			//BOTAO TOGGLE centrifugacaoRPM, so if tela == 2
+			//BOTAO TOGGLE centrifugacaoRPM, so if tela == 1
 			if(tx >= 278 && tx <= 278+32){
 				if(ty >= 184 && ty <= 184+32){
 					Custom_Handler(AT_CENTRIFUGACAO_RPM);
 				}
 			}
 
-			//BOTAO TOGGLE centrifugacaoTempo, so if tela == 2
+			//BOTAO TOGGLE centrifugacaoTempo, so if tela == 1
 			if(tx >= 278 && tx <= 278+32){
 				if(ty >= 224 && ty <= 224+32){
 					Custom_Handler(AT_CENTRIFUGACAO_TEMPO);
 				}
 			}
 
-			//BOTAO TOGGLE heavy, so if tela == 2
+			//BOTAO TOGGLE heavy, so if tela == 1
 			if(tx >= 278 && tx <= 278+32){
 				if(ty >= 264 && ty <= 264+32){
 					Custom_Handler(AT_HEAVY);
 				}
 			}
 
-			//BOTAO TOGGLE bubblesOn, so if tela == 2
+			//BOTAO TOGGLE bubblesOn, so if tela == 1
 			if(tx >= 278 && tx <= 278+32){
 				if(ty >= 304 && ty <= 304+32){
 					Custom_Handler(AT_BUBBLES);
 				}
 			}
+			
+			//Lock Button
 			if(tx >= 32 && tx <= 32+64){
 				if(ty >= 406 && ty <= 406+64){
 					Lock_Handler();
 				}
 			}
 		}
+		
+		//Unlock Buttton
 		else{
 			if(tx >= 32 && tx <= 32+64){
 				if(ty >= 406 && ty <= 406+64){
@@ -780,7 +800,7 @@ int main(void)
 	
 	draw_screen();
 	char nome[32];
-	char custom[32];
+	char custom[40];
 	sprintf(nome,"%s",p_ciclo->nome);
 	font_draw_text(&calibri_36, nome, 116, 84, 1);
 	
@@ -802,6 +822,8 @@ int main(void)
 		if (mxt_is_message_pending(&device)) {
 			mxt_handler(&device);
 		}
+		
+		//Droplet Animation
 		if(flag_tela == 0){
 			if(flag_playing){
 				if (flag_tc){
@@ -814,7 +836,11 @@ int main(void)
 				}
 			}
 		}
+		
+		//Check Lock
 		if (!flag_lock){
+			
+			//Check Next
 			if (flag_next){
 				p_ciclo = p_ciclo->next;
 				ili9488_draw_filled_rectangle(116, 84, 316, 124);
@@ -840,6 +866,8 @@ int main(void)
 				font_draw_text(&calibri_36, b3, 106, 334, 1);
 				flag_next = 0;
 			}
+			
+			//Check Previous
 			if (flag_prev){
 				p_ciclo = p_ciclo->previous;
 				ili9488_draw_filled_rectangle(116, 84, 316, 124);
@@ -865,6 +893,8 @@ int main(void)
 				font_draw_text(&calibri_36, b3, 106, 334, 1);
 				flag_prev = 0;
 			}
+			
+			//Check Play
 			if (flag_door){
 				if (flag_play){
 					if (time_left > 0){
@@ -888,6 +918,8 @@ int main(void)
 					}
 				}
 			}
+			
+			//Check Pause
 			if (flag_pause){
 				rtc_get_time(RTC, &hour_pause, &minute_pause, &second_pause);
 				rtc_disable_interrupt(RTC, RTC_IER_SECEN);
@@ -911,8 +943,10 @@ int main(void)
 				ili9488_draw_pixmap(96, 176, pause_button.width, pause_button.height, pause_button.data);
 			}
 
-			
+			//Check Screen Swap
 			if (flag_swap){
+				
+				//Custom Screen
 				if (flag_tela){
 					ili9488_draw_filled_rectangle(0, 84, ILI9488_LCD_WIDTH-1, 406);
 					sprintf(custom,"Tmp Enx: %d",p_ciclo->enxagueTempo);
@@ -951,6 +985,8 @@ int main(void)
 					ili9488_draw_pixmap(278, 304, toggle.width, toggle.height, toggle.data);
 					ili9488_draw_pixmap(128, 342, confirm.width, confirm.height, confirm.data);
 				}
+				
+				//Regular Screen
 				else{
 					ili9488_draw_filled_rectangle(0, 0, ILI9488_LCD_WIDTH-1, ILI9488_LCD_HEIGHT-1);
 					ili9488_draw_pixmap(32, 10, arrow_left.width, arrow_left.height, arrow_left.data);
@@ -987,36 +1023,33 @@ int main(void)
 				}
 				flag_swap = 0;
 			}
+			//Change Attributes
 			if (flag_alter){
 					ili9488_draw_filled_rectangle(116, 104, 250 , 336);
-					char e_tempo[32];
-					sprintf(e_tempo,"Tmp Enx: %d",p_ciclo->enxagueTempo);
-					font_draw_text(&calibri_36, e_tempo, 10, 104, 1);
+					sprintf(custom,"Tmp Enx: %d",p_ciclo->enxagueTempo);
+					font_draw_text(&calibri_36, custom, 10, 104, 1);
 
-					char e_qnt[32];
-					sprintf(e_qnt,"Qnt Enx: %d",p_ciclo->enxagueQnt);
-					font_draw_text(&calibri_36, e_qnt, 10, 144, 1);
+					sprintf(custom,"Qnt Enx: %d",p_ciclo->enxagueQnt);
+					font_draw_text(&calibri_36, custom, 10, 144, 1);
 
-					char c_rpm[32];
-					sprintf(c_rpm,"RPM: %d",p_ciclo->centrifugacaoRPM);
-					font_draw_text(&calibri_36, c_rpm, 10, 184, 1);
+					sprintf(custom,"RPM: %d",p_ciclo->centrifugacaoRPM);
+					font_draw_text(&calibri_36, custom, 10, 184, 1);
+					
+					sprintf(custom,"Tmp Centr: %d",p_ciclo->centrifugacaoTempo);
+					font_draw_text(&calibri_36, custom, 10, 224, 1);
+					
+					sprintf(custom,"Pesado: %d",p_ciclo->heavy);
+					font_draw_text(&calibri_36, custom, 10, 264, 1);
 
-					char c_tempo[321];
-					sprintf(c_tempo,"Tmp Centr: %d",p_ciclo->centrifugacaoTempo);
-					font_draw_text(&calibri_36, c_tempo, 10, 224, 1);
-
-					char heavy[32];
-					sprintf(heavy,"Pesado: %d",p_ciclo->heavy);
-					font_draw_text(&calibri_36, heavy, 10, 264, 1);
-
-					char bubbles[32];
-					sprintf(bubbles,"Bolhas: %d",p_ciclo->bubblesOn);
-					font_draw_text(&calibri_36, bubbles, 10, 304, 1);
+					sprintf(custom,"Bolhas: %d",p_ciclo->bubblesOn);
+					font_draw_text(&calibri_36, custom, 10, 304, 1);
 				flag_alter = 0;
 			}
 			
 
 		}
+		
+		//Countdown
 		if (flag_rtc_seg){
 			rtc_get_time(RTC,&hour,&minute,&second);
 			char b3[32];
@@ -1024,6 +1057,8 @@ int main(void)
 			font_draw_text(&calibri_36, b3, 106, 334, 1);
 			flag_rtc_seg = 0;
 		}
+		
+		//Check if Wash is over
 		if (flag_rtc_ala){
 			rtc_disable_interrupt(RTC, RTC_IER_SECEN);
 			rtc_disable_interrupt(RTC, RTC_IER_ALREN);
