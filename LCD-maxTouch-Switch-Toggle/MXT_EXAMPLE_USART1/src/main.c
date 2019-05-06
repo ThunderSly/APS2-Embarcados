@@ -99,6 +99,36 @@
 	 uint16_t height;
 	 uint8_t dataSize;
  } tImage;
+ 
+ #include "icones/arrow_left.h"
+ #include "icones/arrow_right.h"
+ #include "icones/locked.h"
+ #include "icones/unlocked.h"
+ #include "icones/closed_door.h"
+ #include "icones/opened_door.h"
+ #include "icones/play_button.h"
+ #include "icones/pause_button.h"
+ #include "icones/pesado.h"
+ #include "icones/rapido.h"
+ #include "icones/diario.h"
+ #include "icones/enxague.h"
+ #include "icones/centrifuga.h"
+ #include "icones/cancel.h"
+ #include "icones/custom.h"
+ #include "icones/config.h"
+ #include "icones/toggle.h"
+ #include "icones/confirm.h"
+
+ #include "icones/drop0.h"
+ #include "icones/drop1.h"
+ #include "icones/drop2.h"
+ #include "icones/drop3.h"
+ #include "icones/drop4.h"
+ #include "icones/drop5.h"
+ #include "icones/drop6.h"
+ #include "icones/drop7.h"
+
+ #include "maquina1.h"
 
 #include "tfont.h"
 #include "calibri_36.h"
@@ -124,85 +154,27 @@
 #define BUT_DEBOUNCING_VALUE    79
 
 struct ili9488_opt_t g_ili9488_display_opt;
-const uint32_t BUTTON_W = 120;
-const uint32_t BUTTON_H = 150;
-const uint32_t BUTTON_BORDER = 2;
-const uint32_t BUTTON_X = ILI9488_LCD_WIDTH/2;
-const uint32_t BUTTON_Y = ILI9488_LCD_HEIGHT/2;
 
 volatile uint8_t flag_rtc_ala = 0;
 volatile uint8_t flag_rtc_seg = 0;
 volatile uint8_t flag_tc = 0;
-volatile uint8_t flag_lock = 0;
 volatile uint8_t flag_door = 0;
-volatile uint8_t flag_play = 0;
-volatile uint8_t flag_next = 0;
-volatile uint8_t flag_prev = 0;
-volatile uint8_t flag_playing = 0;
-volatile uint8_t flag_pause = 0;
-volatile uint8_t flag_paused = 0;
-volatile uint8_t flag_resumed = 0;
 volatile uint8_t lock_counter = 0;
-volatile uint8_t flag_tela = 0;
-volatile uint8_t flag_custom = 0;
-volatile uint8_t flag_swap = 0;
-volatile uint8_t flag_alter = 0;
-
-volatile uint32_t hour;
-volatile uint32_t minute;
-volatile uint32_t second;
-volatile uint32_t hour_pause;
-volatile uint32_t minute_pause;
-volatile uint32_t second_pause;
-volatile uint32_t hour_start;
-volatile uint32_t minute_start;
-volatile uint32_t second_start;
-
-volatile uint32_t total_time;
-volatile uint32_t seconds_left = 59;
-volatile uint32_t time_left;
-
-const int enxague_tempo[4] = {0, 1, 5, 10};
-const int enxague_quant[4] = {0, 1, 2, 3};
-const int centrifugacao_RPM[4] = {0, 800, 1000, 1200};
-const int centrifugacao_tempo[4] = {0, 1, 5, 10};
-
-volatile uint8_t enxague_tempo_counter = 0;
-volatile uint8_t enxague_quant_counter = 0;
-volatile uint8_t centrifugacao_RPM_counter = 0;
-volatile uint8_t centrifugacao_tempo_counter = 0;
+uint8_t flag_lock = 0;
+uint8_t flag_play = 0;
+uint8_t flag_next = 0;
+uint8_t flag_prev = 0;
+uint8_t flag_playing = 0;
+uint8_t flag_pause = 0;
+uint8_t flag_paused = 0;
+uint8_t flag_resumed = 0;
+uint8_t flag_tela = 0;
+uint8_t flag_custom = 0;
+uint8_t flag_swap = 0;
+uint8_t flag_alter = 0;
 
 
- 
-#include "icones/arrow_left.h"
-#include "icones/arrow_right.h"
-#include "icones/locked.h"
-#include "icones/unlocked.h"
-#include "icones/closed_door.h"
-#include "icones/opened_door.h"
-#include "icones/play_button.h"
-#include "icones/pause_button.h"
-#include "icones/pesado.h"
-#include "icones/rapido.h"
-#include "icones/diario.h"
-#include "icones/enxague.h"
-#include "icones/centrifuga.h"
-#include "icones/cancel.h"
-#include "icones/custom.h"
-#include "icones/config.h"
-#include "icones/toggle.h"
-#include "icones/confirm.h"
 
-#include "icones/drop0.h"
-#include "icones/drop1.h"
-#include "icones/drop2.h"
-#include "icones/drop3.h"
-#include "icones/drop4.h"
-#include "icones/drop5.h"
-#include "icones/drop6.h"
-#include "icones/drop7.h"
-
-#include "maquina1.h"
 	
 static void configure_lcd(void){
 	/* Initialize display parameter */
@@ -277,10 +249,8 @@ void TC1_Handler(void){
 
 	/** Muda o estado do LED */
 	lock_counter +=1;
-	if (flag_lock){
-		if (lock_counter >= 2){
-			Lock_Handler();
-		}
+	if (flag_lock && lock_counter >= 2){
+		Lock_Handler();
 	}
 }
 
@@ -317,6 +287,16 @@ void Config_Handler(void){
 }
 
 void Custom_Handler(int attribute){
+	const int enxague_tempo[4] = {0, 1, 5, 10};
+	const int enxague_quant[4] = {0, 1, 2, 3};
+	const int centrifugacao_RPM[4] = {0, 800, 1000, 1200};
+	const int centrifugacao_tempo[4] = {0, 1, 5, 10};
+
+	volatile uint8_t enxague_tempo_counter = 0;
+	volatile uint8_t enxague_quant_counter = 0;
+	volatile uint8_t centrifugacao_RPM_counter = 0;
+	volatile uint8_t centrifugacao_tempo_counter = 0;
+	
 	if (attribute == 0){
 		enxague_tempo_counter ++;
 		if (enxague_tempo_counter > 3){
@@ -417,10 +397,6 @@ void RTC_init(void){
 	NVIC_ClearPendingIRQ(RTC_IRQn);
 	NVIC_SetPriority(RTC_IRQn, 0);
 	NVIC_EnableIRQ(RTC_IRQn);
-
-	/* Ativa interrupcao via alarme */
-// 	rtc_enable_interrupt(RTC,  RTC_IER_SECEN);
-// 	rtc_enable_interrupt(RTC, RTC_IER_ALREN);
 
 }
 
@@ -768,6 +744,9 @@ void mxt_handler(struct mxt_device *device)
 
 int main(void)
 {
+	
+	sysclk_init(); /* Initialize system clocks */
+	board_init();  /* Initialize board */
 	t_ciclo *p_ciclo = initMenuOrder();
 	struct mxt_device device;
 	const usart_serial_options_t usart_serial_options = {
@@ -777,9 +756,6 @@ int main(void)
 		.stopbits     = USART_SERIAL_STOP_BIT
 	};
 
-	sysclk_init(); /* Initialize system clocks */
-	board_init();  /* Initialize board */
-	
 	configure_lcd();
 
 	
@@ -792,8 +768,24 @@ int main(void)
 	stdio_serial_init(USART_SERIAL_EXAMPLE, &usart_serial_options);
 	rtc_disable_interrupt(RTC, RTC_IER_SECEN);
 	rtc_disable_interrupt(RTC, RTC_IER_ALREN);
+	
+	volatile uint32_t hour;
+	volatile uint32_t minute;
+	volatile uint32_t second;
+	volatile uint32_t hour_pause;
+	volatile uint32_t minute_pause;
+	volatile uint32_t second_pause;
+	volatile uint32_t hour_start;
+	volatile uint32_t minute_start;
+	volatile uint32_t second_start;
+
+	volatile uint32_t total_time;
+	volatile uint32_t seconds_left = 59;
+	volatile uint32_t time_left;
+	
 	draw_screen();
 	char nome[32];
+	char custom[32];
 	sprintf(nome,"%s",p_ciclo->nome);
 	font_draw_text(&calibri_36, nome, 116, 84, 1);
 	
@@ -831,7 +823,6 @@ int main(void)
 			if (flag_next){
 				p_ciclo = p_ciclo->next;
 				ili9488_draw_filled_rectangle(116, 84, 316, 124);
-				char nome[32];
 				sprintf(nome,"%s",p_ciclo->nome);
 				font_draw_text(&calibri_36, nome, 116, 84, 1);
 				ili9488_draw_pixmap(128, 10, p_ciclo->icon->width, p_ciclo->icon->height, p_ciclo->icon->data);
@@ -857,7 +848,6 @@ int main(void)
 			if (flag_prev){
 				p_ciclo = p_ciclo->previous;
 				ili9488_draw_filled_rectangle(116, 84, 316, 124);
-				char nome[32];
 				sprintf(nome,"%s",p_ciclo->nome);
 				font_draw_text(&calibri_36, nome, 116, 84, 1);
 				ili9488_draw_pixmap(128, 10, p_ciclo->icon->width, p_ciclo->icon->height, p_ciclo->icon->data);
@@ -930,44 +920,38 @@ int main(void)
 			if (flag_swap){
 				if (flag_tela){
 					ili9488_draw_filled_rectangle(0, 84, ILI9488_LCD_WIDTH-1, 406);
-					char e_tempo[32];
-					sprintf(e_tempo,"Tmp Enx: %d",p_ciclo->enxagueTempo);
-					font_draw_text(&calibri_36, e_tempo, 10, 104, 1);
+					sprintf(custom,"Tmp Enx: %d",p_ciclo->enxagueTempo);
+					font_draw_text(&calibri_36, custom, 10, 104, 1);
 					// enxagueTempo TOGGLE (IMAGEM)
 					ili9488_draw_pixmap(278, 104, toggle.width, toggle.height, toggle.data);
 
 					// enxagueQnt TEXTO
-					char e_qnt[32];
-					sprintf(e_qnt,"Qnt Enx: %d",p_ciclo->enxagueQnt);
-					font_draw_text(&calibri_36, e_qnt, 10, 144, 1);
+					sprintf(custom,"Qnt Enx: %d",p_ciclo->enxagueQnt);
+					font_draw_text(&calibri_36, custom, 10, 144, 1);
 					// enxagueQnt TOGGLE (IMAGEM)
 					ili9488_draw_pixmap(278, 144, toggle.width, toggle.height, toggle.data);
 
 					// centrifugacaoRPM TEXTO
-					char c_rpm[32];
-					sprintf(c_rpm,"RPM: %d",p_ciclo->centrifugacaoRPM);
-					font_draw_text(&calibri_36, c_rpm, 10, 184, 1);
+					sprintf(custom,"RPM: %d",p_ciclo->centrifugacaoRPM);
+					font_draw_text(&calibri_36, custom, 10, 184, 1);
 					// centrifugacaoRPM TOGGLE (IMAGEM)
 					ili9488_draw_pixmap(278, 184, toggle.width, toggle.height, toggle.data);
 
 					// centrifugacaoTempo TEXTO
-					char c_tempo[321];
-					sprintf(c_tempo,"Tmp Centr: %d",p_ciclo->centrifugacaoTempo);
-					font_draw_text(&calibri_36, c_tempo, 10, 224, 1);
+					sprintf(custom,"Tmp Centr: %d",p_ciclo->centrifugacaoTempo);
+					font_draw_text(&calibri_36, custom, 10, 224, 1);
 					// centrifugacaoTempo TOGGLE (IMAGEM)
 					ili9488_draw_pixmap(278, 224, toggle.width, toggle.height, toggle.data);
 
 					// heavy TEXTO
-					char heavy[32];
-					sprintf(heavy,"Pesado: %d",p_ciclo->heavy);
-					font_draw_text(&calibri_36, heavy, 10, 264, 1);
+					sprintf(custom,"Pesado: %d",p_ciclo->heavy);
+					font_draw_text(&calibri_36, custom, 10, 264, 1);
 					// heavy TOGGLE (IMAGEM)
 					ili9488_draw_pixmap(278, 264, toggle.width, toggle.height, toggle.data);
 
 					// bubblesOn TEXTO
-					char bubbles[32];
-					sprintf(bubbles,"Bolhas: %d",p_ciclo->bubblesOn);
-					font_draw_text(&calibri_36, bubbles, 10, 304, 1);
+					sprintf(custom,"Bolhas: %d",p_ciclo->bubblesOn);
+					font_draw_text(&calibri_36, custom, 10, 304, 1);
 					// bubblesOn TOGGLE (IMAGEM)
 					ili9488_draw_pixmap(278, 304, toggle.width, toggle.height, toggle.data);
 					ili9488_draw_pixmap(128, 342, confirm.width, confirm.height, confirm.data);
@@ -993,7 +977,6 @@ int main(void)
 					char modo[32];
 					sprintf(modo,"Modo:");
 					font_draw_text(&calibri_36, modo, 10, 84, 1);
-					char nome[32];
 					sprintf(nome,"%s",p_ciclo->nome);
 					font_draw_text(&calibri_36, nome, 116, 84, 1);
 					total_time = (p_ciclo->centrifugacaoTempo * (!!p_ciclo->centrifugacaoRPM) + p_ciclo->enxagueTempo * p_ciclo->enxagueQnt);
@@ -1074,5 +1057,3 @@ int main(void)
 
 	return 0;
 }
-
-//MODO CONFIG
