@@ -153,6 +153,13 @@
 #define BUT_PIO_IDX_MASK		(1 << BUT_PIO_IDX)
 #define BUT_DEBOUNCING_VALUE    79
 
+#define AT_ENXAGUE_TEMPO 0
+#define AT_ENXAGUE_QNT 1
+#define AT_CENTRIFUGACAO_RPM 2
+#define AT_CENTRIFUGACAO_TEMPO 3
+#define AT_HEAVY 4
+#define AT_BUBBLES 5
+
 struct ili9488_opt_t g_ili9488_display_opt;
 
 volatile uint8_t flag_rtc_ala = 0;
@@ -172,8 +179,6 @@ uint8_t flag_tela = 0;
 uint8_t flag_custom = 0;
 uint8_t flag_swap = 0;
 uint8_t flag_alter = 0;
-
-
 
 	
 static void configure_lcd(void){
@@ -297,38 +302,38 @@ void Custom_Handler(int attribute){
 	volatile uint8_t centrifugacao_RPM_counter = 0;
 	volatile uint8_t centrifugacao_tempo_counter = 0;
 	
-	if (attribute == 0){
+	if (attribute == AT_ENXAGUE_TEMPO){
 		enxague_tempo_counter ++;
 		if (enxague_tempo_counter > 3){
 			enxague_tempo_counter = 0;
 		}
 		c_custom.enxagueTempo = enxague_tempo[enxague_tempo_counter];
 	}
-	if (attribute == 1){
+	if (attribute == AT_ENXAGUE_QNT){
 		enxague_quant_counter++;
 		if (enxague_quant_counter > 3){
 			enxague_quant_counter = 0;
 		}
 		c_custom.enxagueQnt = enxague_quant[enxague_quant_counter];
 	}
-	if (attribute == 2){
+	if (attribute == AT_CENTRIFUGACAO_RPM){
 		centrifugacao_RPM_counter ++;
 		if (centrifugacao_RPM_counter > 3){
 			centrifugacao_RPM_counter = 0;
 		}
 		c_custom.centrifugacaoRPM = centrifugacao_RPM[centrifugacao_RPM_counter];
 	}
-	if (attribute == 3){
+	if (attribute == AT_CENTRIFUGACAO_TEMPO){
 		centrifugacao_tempo_counter ++;
 		if (centrifugacao_tempo_counter > 3){
 			centrifugacao_tempo_counter = 0;
 		}
 		c_custom.centrifugacaoTempo = centrifugacao_tempo[centrifugacao_tempo_counter];
 	}
-	if (attribute == 4){
+	if (attribute == AT_HEAVY){
 		c_custom.heavy = !c_custom.heavy;
 	}
-	if (attribute == 5){
+	if (attribute == AT_BUBBLES){
 		c_custom.bubblesOn = !c_custom.bubblesOn;
 	}
 	flag_alter = 1;
@@ -631,42 +636,42 @@ void update_screen(uint32_t tx, uint32_t ty) {
 			//BOTAO TOGGLE enxagueTempo, so if tela == 2
 			if(tx >= 278 && tx <= 278+32){
 				if(ty >= 104 && ty <= 104+32){
-					Custom_Handler(0);
+					Custom_Handler(AT_ENXAGUE_TEMPO);
 				}
 			}
 
 			//BOTAO TOGGLE enxagueQnt, so if tela == 2
 			if(tx >= 278 && tx <= 278+32){
 				if(ty >= 144 && ty <= 144+32){
-					Custom_Handler(1);
+					Custom_Handler(AT_ENXAGUE_QNT);
 				}
 			}
 
 			//BOTAO TOGGLE centrifugacaoRPM, so if tela == 2
 			if(tx >= 278 && tx <= 278+32){
 				if(ty >= 184 && ty <= 184+32){
-					Custom_Handler(2);
+					Custom_Handler(AT_CENTRIFUGACAO_RPM);
 				}
 			}
 
 			//BOTAO TOGGLE centrifugacaoTempo, so if tela == 2
 			if(tx >= 278 && tx <= 278+32){
 				if(ty >= 224 && ty <= 224+32){
-					Custom_Handler(3);
+					Custom_Handler(AT_CENTRIFUGACAO_TEMPO);
 				}
 			}
 
 			//BOTAO TOGGLE heavy, so if tela == 2
 			if(tx >= 278 && tx <= 278+32){
 				if(ty >= 264 && ty <= 264+32){
-					Custom_Handler(4);
+					Custom_Handler(AT_HEAVY);
 				}
 			}
 
 			//BOTAO TOGGLE bubblesOn, so if tela == 2
 			if(tx >= 278 && tx <= 278+32){
 				if(ty >= 304 && ty <= 304+32){
-					Custom_Handler(5);
+					Custom_Handler(AT_BUBBLES);
 				}
 			}
 			if(tx >= 32 && tx <= 32+64){
